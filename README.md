@@ -98,10 +98,10 @@ Here are some commands you might find useful during development:
   make test
   ```
 
-- **Run linting:**
+- **Run linters in format mode, possibly fixing problems:**
 
   ```bash
-  make lint
+  make format
   ```
   
 ## License
