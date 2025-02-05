@@ -12,8 +12,8 @@ install: ## Install dependencies
 	poetry install --no-interaction --no-ansi --no-root --all-extras
 
 .PHONY: lint
-lint: ## Run linters in format mode
-	$(POETRY_RUN) black ./src ./tests
+lint: ## Run linters in check mode
+	$(POETRY_RUN) black --check ./src ./tests
 	$(POETRY_RUN) ruff check ./src ./tests
 	$(POETRY_RUN) mypy ./src ./tests
 	$(POETRY_RUN) pytest --dead-fixtures --dup-fixtures
