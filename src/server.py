@@ -40,7 +40,7 @@ async def default_lifespan(application: FastAPI) -> AsyncIterator[None]:
             max_workers=4,
         ),
     )
-    application.settings = TGBotSettings() # type: ignore[attr-defined]
+    application.settings = TGBotSettings() # type: ignore[call-arg, attr-defined]
     application.storage = Storage() # type: ignore[attr-defined]
 
     client = TelegramClient(
