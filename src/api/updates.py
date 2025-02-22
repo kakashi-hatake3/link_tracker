@@ -26,7 +26,7 @@ async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]
             detail=ApiErrorResponse(
                 description="Ошибка при обработке обновления",
                 code="UPDATE_PROCESSING_ERROR",
-                exception_name=e.__class__.__name__,
-                exception_message=str(e)
-            ).dict()
+                exceptionName=e.__class__.__name__,
+                exceptionMessage=str(e)
+            ).model_dump()
         ) 
