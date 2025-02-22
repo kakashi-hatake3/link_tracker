@@ -84,13 +84,11 @@ app.add_middleware(
 )
 
 if __name__ == "__main__":
-    # logger = logging.getLogger(__name__)
     logger.info("serving app on port: %d", 7777)
     logger.info("http://0.0.0.0:7777/docs")
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=7777,
-        # log_level=os.getenv("LOGGING_LEVEL", "info").lower(),
-        log_config="../log_conf.yaml",
+        log_config="log_conf.yaml",
     )
