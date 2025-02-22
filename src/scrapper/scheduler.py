@@ -99,13 +99,13 @@ class UpdateScheduler:
         """Отправляет уведомление об обновлении через API бота"""
         try:
             bot_api_url = f"{self.bot_base_url}/api/v1/updates"
-            logger.info("before session")
+            logger.debug("before session")
             json_data = jsonable_encoder(update)
-            logger.info("after dump: %s", json_data)
+            logger.debug("after dump: %s", json_data)
             async with aiohttp.ClientSession() as session:
-                logger.info("getting session")
+                logger.debug("getting session")
                 async with session.post(bot_api_url, json=json_data) as response:
-                    logger.info("sending request: %d", response.status)
+                    logger.debug("sending request: %d", response.status)
                     if response.status != 200:
                         error_data = await response.json()
                         logger.error("Failed to send update notification: %s", error_data)

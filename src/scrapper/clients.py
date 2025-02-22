@@ -47,14 +47,14 @@ class GitHubClient(BaseClient):
             return None
 
         api_url = f"{self.BASE_URL}/repos/{owner}/{repo}"
-        logger.info("before getting api")
+        logger.debug("before getting api")
         async with self.session.get(api_url) as response:
-            logger.info("api response: %d", response.status)
+            logger.debug("api response: %d", response.status)
             if response.status != 200:
                 return None
 
             data = await response.json()
-            logger.info("data %s", data)
+            logger.debug("data %s", data)
 
             updated_at = data.get("updated_at")
             if not updated_at:
