@@ -7,6 +7,7 @@ from pydantic import HttpUrl
 
 from src.models import Link
 from src.storage import Storage
+from src.scrapper_client import ScrapperClient
 
 HELP_MESSAGE = """
 Доступные команды:
@@ -21,6 +22,7 @@ class BotHandler:
     def __init__(self, client: TelegramClient, storage: Storage):
         self.client = client
         self.storage = storage
+        self.scrapper = ScrapperClient()
         self._setup_handlers()
 
     def _setup_handlers(self) -> None:
@@ -32,8 +34,14 @@ class BotHandler:
         self.client.add_event_handler(self._unknown_command_handler, events.NewMessage(pattern='/[a-zA-Z]+'))
 
     async def _start_handler(self, event: NewMessage.Event) -> None:
-        self.storage.add_user(event.chat_id)
-        await event.reply("Добро пожаловать! Используйте /help для просмотра доступных команд.")
+        chat_id = event.chat_id
+        self.storage.add_user(chat_id)
+        
+        # Регистрируем чат в scrapper API
+        if await self.scrapper.register_chat(chat_id):
+            await event.reply("Добро пожаловать! Используйте /help для просмотра доступных команд.")
+        else:
+            await event.reply("Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.")
 
     async def _help_handler(self, event: NewMessage.Event) -> None:
         await event.reply(HELP_MESSAGE)
@@ -55,11 +63,12 @@ class BotHandler:
             if not all([parsed_url.scheme, parsed_url.netloc]):
                 raise ValueError("Invalid URL")
                 
-            link = Link(url=url, description=description)
-            if self.storage.add_link(event.chat_id, link):
+            # Добавляем ссылку через scrapper API
+            link_response = await self.scrapper.add_link(event.chat_id, url, description)
+            if link_response:
                 await event.reply(f"Ссылка {url} добавлена для отслеживания.")
             else:
-                await event.reply("Эта ссылка уже отслеживается.")
+                await event.reply("Эта ссылка уже отслеживается или произошла ошибка при добавлении.")
         except Exception as e:
             await event.reply(f"Ошибка при добавлении ссылки: {str(e)}")
 
@@ -73,25 +82,35 @@ class BotHandler:
             return
 
         url = parts[1]
-        if self.storage.remove_link(event.chat_id, url):
-            await event.reply(f"Отслеживание ссылки {url} прекращено.")
-        else:
-            await event.reply("Указанная ссылка не отслеживается.")
+        try:
+            # Удаляем ссылку через scrapper API
+            link_response = await self.scrapper.remove_link(event.chat_id, url)
+            if link_response:
+                await event.reply(f"Отслеживание ссылки {url} прекращено.")
+            else:
+                await event.reply("Указанная ссылка не отслеживается.")
+        except Exception as e:
+            await event.reply(f"Ошибка при удалении ссылки: {str(e)}")
 
     async def _list_handler(self, event: NewMessage.Event) -> None:
-        links = self.storage.get_links(event.chat_id)
-        if not links:
-            await event.reply("Список отслеживаемых ссылок пуст.")
-            return
+        try:
+            # Получаем список ссылок через scrapper API
+            links = await self.scrapper.get_links(event.chat_id)
+            
+            if not links:
+                await event.reply("Список отслеживаемых ссылок пуст.")
+                return
 
-        message = "Отслеживаемые ссылки:\n\n"
-        for link in links:
-            message += f"🔗 {link.url}"
-            if link.description:
-                message += f" - {link.description}"
-            message += "\n"
-        
-        await event.reply(message)
+            message = "Отслеживаемые ссылки:\n\n"
+            for link in links:
+                message += f"🔗 {link.url}"
+                if link.tags:
+                    message += f" - {', '.join(link.tags)}"
+                message += "\n"
+            
+            await event.reply(message)
+        except Exception as e:
+            await event.reply(f"Ошибка при получении списка ссылок: {str(e)}")
 
     async def _unknown_command_handler(self, event: NewMessage.Event):
         if event.message.text and event.message.text.startswith('/'):
