@@ -1,8 +1,10 @@
 from typing import Optional
 from urllib.parse import urlparse
 
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, types
 from telethon.events import NewMessage
+from telethon.tl.functions.bots import SetBotCommandsRequest
+from telethon.tl.types import BotCommand, BotCommandScopeDefault
 from pydantic import HttpUrl
 
 from src.models import Link
@@ -24,6 +26,28 @@ class BotHandler:
         self.storage = storage
         self.scrapper = ScrapperClient()
         self._setup_handlers()
+
+    @classmethod
+    async def create(cls, client: TelegramClient, storage: Storage) -> 'BotHandler':
+        """Фабричный метод для создания экземпляра BotHandler"""
+        handler = cls(client, storage)
+        await handler._register_commands()
+        return handler
+
+    async def _register_commands(self) -> None:
+        """Регистрирует команды бота в Telegram"""
+        commands = [
+            BotCommand(command="start", description="Регистрация пользователя"),
+            BotCommand(command="help", description="Вывод списка доступных команд"),
+            BotCommand(command="track", description="Начать отслеживание ссылки"),
+            BotCommand(command="untrack", description="Прекратить отслеживание ссылки"),
+            BotCommand(command="list", description="Показать список отслеживаемых ссылок"),
+        ]
+        await self.client(SetBotCommandsRequest(
+            scope=BotCommandScopeDefault(),
+            lang_code="ru",
+            commands=commands
+        ))
 
     def _setup_handlers(self) -> None:
         self.client.add_event_handler(self._start_handler, events.NewMessage(pattern='/start'))
