@@ -1,9 +1,8 @@
-import pytest
-from src.storage import Storage
 from src.models import Link
+from src.storage import Storage
 
 
-def test_add_and_get_user():
+def test_add_and_get_user() -> None:
     storage = Storage()
     chat_id = 123
     assert storage.get_user(chat_id) is None
@@ -15,7 +14,7 @@ def test_add_and_get_user():
     assert user.tracked_links == []
 
 
-def test_add_user_idempotent():
+def test_add_user_idempotent() -> None:
     storage = Storage()
     chat_id = 123
     storage.add_user(chat_id)
@@ -25,7 +24,7 @@ def test_add_user_idempotent():
     assert user1 is user2
 
 
-def test_add_link_success():
+def test_add_link_success() -> None:
     storage = Storage()
     chat_id = 100
     storage.add_user(chat_id)
@@ -40,7 +39,7 @@ def test_add_link_success():
     assert user.tracked_links[0].description == "Example site"
 
 
-def test_add_link_failure_no_user():
+def test_add_link_failure_no_user() -> None:
     storage = Storage()
     chat_id = 200
     link = Link(url="https://example.com", description="Example site")
@@ -48,7 +47,7 @@ def test_add_link_failure_no_user():
     assert result is False
 
 
-def test_add_link_duplicate():
+def test_add_link_duplicate() -> None:
     storage = Storage()
     chat_id = 300
     storage.add_user(chat_id)
@@ -63,7 +62,7 @@ def test_add_link_duplicate():
     assert len(user.tracked_links) == 1
 
 
-def test_remove_link_success():
+def test_remove_link_success() -> None:
     storage = Storage()
     chat_id = 400
     storage.add_user(chat_id)
@@ -77,13 +76,13 @@ def test_remove_link_success():
     assert len(user.tracked_links) == 0
 
 
-def test_remove_link_failure_no_user():
+def test_remove_link_failure_no_user() -> None:
     storage = Storage()
     result = storage.remove_link(500, "https://example.com")
     assert result is False
 
 
-def test_remove_link_failure_not_found():
+def test_remove_link_failure_not_found() -> None:
     storage = Storage()
     chat_id = 600
     storage.add_user(chat_id)
@@ -97,7 +96,7 @@ def test_remove_link_failure_not_found():
     assert len(user.tracked_links) == 1
 
 
-def test_get_links_empty():
+def test_get_links_empty() -> None:
     storage = Storage()
     chat_id = 700
     storage.add_user(chat_id)
@@ -105,7 +104,7 @@ def test_get_links_empty():
     assert links == []
 
 
-def test_get_links_no_user():
+def test_get_links_no_user() -> None:
     storage = Storage()
     links = storage.get_links(800)
     assert links == []

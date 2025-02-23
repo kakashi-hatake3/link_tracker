@@ -1,9 +1,10 @@
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from src.scrapper.scheduler import UpdateScheduler
 from src.scrapper.storage import ScrapperStorage
-from src.scrapper.clients import UpdateChecker
 
 
 @pytest.fixture
@@ -28,8 +29,8 @@ def scheduler(storage, update_checker):
 
 
 @pytest.mark.asyncio
-async def test_start_stop_scheduler(scheduler):
-    """Тест запуска и остановки планировщика"""
+async def test_start_stop_scheduler(scheduler) -> None:
+    """Тест запуска и остановки планировщика."""
     await scheduler.start(check_interval=1)
     assert scheduler._running is True
     assert scheduler._task is not None
@@ -40,8 +41,8 @@ async def test_start_stop_scheduler(scheduler):
 
 
 @pytest.mark.asyncio
-async def test_check_updates_github(scheduler, update_checker):
-    """Тест проверки обновлений для GitHub ссылки"""
+async def test_check_updates_github(scheduler, update_checker) -> None:
+    """Тест проверки обновлений для GitHub ссылки."""
     update_time = datetime.now()
     update_checker.check_updates.return_value = update_time
 
@@ -53,8 +54,8 @@ async def test_check_updates_github(scheduler, update_checker):
 
 
 @pytest.mark.asyncio
-async def test_check_updates_stackoverflow(scheduler, update_checker):
-    """Тест проверки обновлений для StackOverflow ссылки"""
+async def test_check_updates_stackoverflow(scheduler, update_checker) -> None:
+    """Тест проверки обновлений для StackOverflow ссылки."""
     update_time = datetime.now()
     update_checker.check_updates.return_value = update_time
 
@@ -66,8 +67,8 @@ async def test_check_updates_stackoverflow(scheduler, update_checker):
 
 
 @pytest.mark.asyncio
-async def test_send_update_notification(scheduler):
-    """Тест отправки уведомления об обновлении"""
+async def test_send_update_notification(scheduler) -> None:
+    """Тест отправки уведомления об обновлении."""
     mock_response = AsyncMock()
     mock_response.status = 200
 
@@ -93,8 +94,8 @@ async def test_send_update_notification(scheduler):
 
 
 @pytest.mark.asyncio
-async def test_no_update_notification_for_first_check(scheduler):
-    """Тест отсутствия уведомления при первой проверке"""
+async def test_no_update_notification_for_first_check(scheduler) -> None:
+    """Тест отсутствия уведомления при первой проверке."""
     update_time = datetime.now()
     scheduler.update_checker.check_updates.return_value = update_time
 
@@ -112,8 +113,8 @@ async def test_no_update_notification_for_first_check(scheduler):
 
 
 @pytest.mark.asyncio
-async def test_handle_check_updates_error(scheduler):
-    """Тест обработки ошибки при проверке обновлений"""
+async def test_handle_check_updates_error(scheduler) -> None:
+    """Тест обработки ошибки при проверке обновлений."""
     scheduler.update_checker.check_updates.side_effect = Exception("Test error")
 
     await scheduler._check_all_links()

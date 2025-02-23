@@ -1,9 +1,9 @@
-import pytest
 from pydantic import HttpUrl
-from src.models import Link, LinkUpdate, ApiErrorResponse, User
+
+from src.models import ApiErrorResponse, Link, LinkUpdate, User
 
 
-def test_link_model():
+def test_link_model() -> None:
     link_data = {"url": "https://example.com", "description": "Test description"}
     link = Link(**link_data)
     assert isinstance(link.url, HttpUrl)
@@ -15,7 +15,7 @@ def test_link_model():
     assert link_without_description.description is None
 
 
-def test_link_update_model():
+def test_link_update_model() -> None:
     update_data = {
         "id": 1,
         "url": "https://example.com",
@@ -30,7 +30,7 @@ def test_link_update_model():
     assert update.tg_chat_ids == [123456789]
 
 
-def test_api_error_response_model():
+def test_api_error_response_model() -> None:
     error_data = {
         "description": "Test error",
         "code": "TEST_ERROR",
@@ -54,7 +54,7 @@ def test_api_error_response_model():
     assert min_error.stacktrace is None
 
 
-def test_user_model():
+def test_user_model() -> None:
     user_data = {
         "chat_id": 123456789,
         "tracked_links": [{"url": "https://example.com", "description": "Test link"}],

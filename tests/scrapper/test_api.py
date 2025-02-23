@@ -1,9 +1,9 @@
-import json
+
+from typing import NoReturn
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pydantic import HttpUrl
 
 from src.scrapper.api import router
 from src.scrapper.storage import ScrapperStorage
@@ -22,7 +22,7 @@ def client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
-def test_register_chat(client: TestClient):
+def test_register_chat(client: TestClient) -> None:
     response = client.post("/tg-chat/1")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -33,7 +33,7 @@ def test_register_chat(client: TestClient):
     assert chat.chat_id == 1
 
 
-def test_remove_chat_success(client: TestClient):
+def test_remove_chat_success(client: TestClient) -> None:
     client.post("/tg-chat/1")
 
     response = client.delete("/tg-chat/1")
@@ -44,7 +44,7 @@ def test_remove_chat_success(client: TestClient):
     assert storage.get_chat(1) is None
 
 
-def test_remove_chat_not_found(client: TestClient):
+def test_remove_chat_not_found(client: TestClient) -> None:
     response = client.delete("/tg-chat/999")
     assert response.status_code == 404
     error = response.json()
@@ -52,7 +52,7 @@ def test_remove_chat_not_found(client: TestClient):
     assert error["detail"]["code"] == "CHAT_NOT_FOUND"
 
 
-def test_get_links_empty(client: TestClient):
+def test_get_links_empty(client: TestClient) -> None:
     client.post("/tg-chat/1")
     headers = {"Tg-Chat-Id": "1"}
 
@@ -63,7 +63,7 @@ def test_get_links_empty(client: TestClient):
     assert data["links"] == []
 
 
-def test_add_link_success_and_duplicate(client: TestClient):
+def test_add_link_success_and_duplicate(client: TestClient) -> None:
     client.post("/tg-chat/1")
     headers = {"Tg-Chat-Id": "1"}
 
@@ -84,7 +84,7 @@ def test_add_link_success_and_duplicate(client: TestClient):
     assert error["detail"]["code"] == "LINK_ALREADY_EXISTS"
 
 
-def test_remove_link_success_and_not_found(client: TestClient):
+def test_remove_link_success_and_not_found(client: TestClient) -> None:
     client.post("/tg-chat/1")
     headers = {"Tg-Chat-Id": "1"}
 
@@ -105,8 +105,8 @@ def test_remove_link_success_and_not_found(client: TestClient):
     assert error["detail"]["code"] == "LINK_NOT_FOUND"
 
 
-def test_register_chat_exception(client: TestClient, monkeypatch):
-    def raise_exception(chat_id: int):
+def test_register_chat_exception(client: TestClient, monkeypatch) -> None:
+    def raise_exception(chat_id: int) -> NoReturn:
         raise Exception("Test error")
 
     client.app.state.storage.add_chat = raise_exception
@@ -121,8 +121,8 @@ def test_register_chat_exception(client: TestClient, monkeypatch):
     assert "Test error" in detail["exception_message"]
 
 
-def test_remove_chat_exception(client: TestClient, monkeypatch):
-    def raise_exception(chat_id: int):
+def test_remove_chat_exception(client: TestClient, monkeypatch) -> None:
+    def raise_exception(chat_id: int) -> NoReturn:
         raise Exception("Test error")
 
     client.app.state.storage.remove_chat = raise_exception
@@ -137,8 +137,8 @@ def test_remove_chat_exception(client: TestClient, monkeypatch):
     assert "Test error" in detail["exception_message"]
 
 
-def test_get_links_exception(client: TestClient, monkeypatch):
-    def raise_exception(chat_id: int):
+def test_get_links_exception(client: TestClient, monkeypatch) -> None:
+    def raise_exception(chat_id: int) -> NoReturn:
         raise Exception("Test error")
 
     client.app.state.storage.get_links = raise_exception
@@ -154,8 +154,8 @@ def test_get_links_exception(client: TestClient, monkeypatch):
     assert "Test error" in detail["exception_message"]
 
 
-def test_add_link_exception(client: TestClient, monkeypatch):
-    def raise_exception(chat_id: int, url, tags, filters):
+def test_add_link_exception(client: TestClient, monkeypatch) -> None:
+    def raise_exception(chat_id: int, url, tags, filters) -> NoReturn:
         raise Exception("Test error")
 
     client.app.state.storage.add_link = raise_exception
@@ -172,8 +172,8 @@ def test_add_link_exception(client: TestClient, monkeypatch):
     assert "Test error" in detail["exception_message"]
 
 
-def test_remove_link_exception(client: TestClient, monkeypatch):
-    def raise_exception(chat_id: int, url: str):
+def test_remove_link_exception(client: TestClient, monkeypatch) -> None:
+    def raise_exception(chat_id: int, url: str) -> NoReturn:
         raise Exception("Test error")
 
     client.app.state.storage.remove_link = raise_exception

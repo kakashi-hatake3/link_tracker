@@ -1,9 +1,7 @@
-import pytest
-import asyncio
-from urllib.parse import urlparse
 
-from telethon.tl.types import BotCommand
-from src.handlers.bot_handlers import BotHandler, HELP_MESSAGE
+import pytest
+
+from src.handlers.bot_handlers import HELP_MESSAGE, BotHandler
 from src.storage import Storage
 
 
@@ -12,46 +10,44 @@ class FakeScrapper:
         return True
 
     async def add_link(self, chat_id: int, url, description=None):
-        FakeLinkResponse = type(
-            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []}
+        return type(
+            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []},
         )
-        return FakeLinkResponse
 
     async def remove_link(self, chat_id: int, url):
         if url == "https://example.com":
-            FakeLinkResponse = type("FakeLinkResponse", (), {"url": url})
-            return FakeLinkResponse
+            return type("FakeLinkResponse", (), {"url": url})
         return None
 
     async def get_links(self, chat_id: int):
         if chat_id == 12345:
             FakeLinkResponse = type(
-                "FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]}
+                "FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]},
             )
             return [FakeLinkResponse]
         return []
 
 
 class FakeMessage:
-    def __init__(self, text: str):
+    def __init__(self, text: str) -> None:
         self.text = text
 
 
 class FakeEvent:
-    def __init__(self, text: str, chat_id: int = 12345):
+    def __init__(self, text: str, chat_id: int = 12345) -> None:
         self.chat_id = chat_id
         self.message = FakeMessage(text)
         self.replies = []
 
-    async def reply(self, message: str):
+    async def reply(self, message: str) -> None:
         self.replies.append(message)
 
 
 class FakeClient:
-    def __init__(self):
+    def __init__(self) -> None:
         self.handlers = []
 
-    def add_event_handler(self, callback, event):
+    def add_event_handler(self, callback, event) -> None:
         self.handlers.append((callback, event))
 
     async def __call__(self, request):
@@ -59,7 +55,7 @@ class FakeClient:
 
 
 class CustomFakeScrapper:
-    def __init__(self, add_link_return=None, remove_link_return=None, get_links_exception=False):
+    def __init__(self, add_link_return=None, remove_link_return=None, get_links_exception=False) -> None:
         self._add_link_return = add_link_return
         self._remove_link_return = remove_link_return
         self._get_links_exception = get_links_exception
@@ -70,10 +66,9 @@ class CustomFakeScrapper:
     async def add_link(self, chat_id: int, url, description=None):
         if self._add_link_return is None:
             return None
-        FakeLinkResponse = type(
-            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []}
+        return type(
+            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []},
         )
-        return FakeLinkResponse
 
     async def remove_link(self, chat_id: int, url):
         return self._remove_link_return
@@ -85,7 +80,7 @@ class CustomFakeScrapper:
 
 
 @pytest.mark.asyncio
-async def test_start_handler():
+async def test_start_handler() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -98,7 +93,7 @@ async def test_start_handler():
 
 
 @pytest.mark.asyncio
-async def test_help_handler():
+async def test_help_handler() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -108,7 +103,7 @@ async def test_help_handler():
 
 
 @pytest.mark.asyncio
-async def test_track_handler_success():
+async def test_track_handler_success() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -119,7 +114,7 @@ async def test_track_handler_success():
 
 
 @pytest.mark.asyncio
-async def test_track_handler_invalid_url():
+async def test_track_handler_invalid_url() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -130,7 +125,7 @@ async def test_track_handler_invalid_url():
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_success():
+async def test_untrack_handler_success() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -141,7 +136,7 @@ async def test_untrack_handler_success():
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_not_found():
+async def test_untrack_handler_not_found() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -152,7 +147,7 @@ async def test_untrack_handler_not_found():
 
 
 @pytest.mark.asyncio
-async def test_list_handler_empty():
+async def test_list_handler_empty() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -168,7 +163,7 @@ async def test_list_handler_empty():
 
 
 @pytest.mark.asyncio
-async def test_list_handler_with_links():
+async def test_list_handler_with_links() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -181,7 +176,7 @@ async def test_list_handler_with_links():
 
 
 @pytest.mark.asyncio
-async def test_unknown_command_handler():
+async def test_unknown_command_handler() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -191,7 +186,7 @@ async def test_unknown_command_handler():
 
 
 @pytest.mark.asyncio
-async def test_track_handler_missing_url():
+async def test_track_handler_missing_url() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -202,7 +197,7 @@ async def test_track_handler_missing_url():
 
 
 @pytest.mark.asyncio
-async def test_track_handler_scrapper_returns_none():
+async def test_track_handler_scrapper_returns_none() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -213,7 +208,7 @@ async def test_track_handler_scrapper_returns_none():
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_missing_url():
+async def test_untrack_handler_missing_url() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -227,7 +222,7 @@ async def test_untrack_handler_missing_url():
 
 
 @pytest.mark.asyncio
-async def test_list_handler_exception():
+async def test_list_handler_exception() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
@@ -238,7 +233,7 @@ async def test_list_handler_exception():
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_empty_text():
+async def test_untrack_handler_empty_text() -> None:
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)

@@ -1,10 +1,9 @@
-import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
 
 class FakeTelegramClient:
-    async def send_message(self, chat_id, message):
+    async def send_message(self, chat_id, message) -> None:
         return None
 
     async def __aenter__(self):
@@ -15,7 +14,7 @@ class FakeTelegramClient:
 
 
 class FakeTelegramClientWrapper:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def start(self, bot_token):
@@ -27,17 +26,17 @@ class FakeTelegramClientWrapper:
 
 class FakeBotHandler:
     @classmethod
-    async def create(cls, tg_client, storage):
+    async def create(cls, tg_client, storage) -> str:
         return "fake_bot_handler"
 
 
 @pytest.fixture(autouse=True)
-def patch_telethon_and_bot_handler(monkeypatch):
+def patch_telethon_and_bot_handler(monkeypatch) -> None:
     monkeypatch.setattr(
-        "src.server.TelegramClient", lambda *args, **kwargs: FakeTelegramClientWrapper()
+        "src.server.TelegramClient", lambda *args, **kwargs: FakeTelegramClientWrapper(),
     )
     monkeypatch.setattr(
-        "src.server.BotHandler", type("FakeBotHandlerClass", (), {"create": FakeBotHandler.create})
+        "src.server.BotHandler", type("FakeBotHandlerClass", (), {"create": FakeBotHandler.create}),
     )
 
 
@@ -48,7 +47,7 @@ def test_app():
     return app
 
 
-def test_lifespan_setup(test_app):
+def test_lifespan_setup(test_app) -> None:
     with TestClient(test_app) as client:
         assert hasattr(client.app, "settings")
         assert hasattr(client.app, "storage")

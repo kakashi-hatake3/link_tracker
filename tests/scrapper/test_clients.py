@@ -1,14 +1,16 @@
-import pytest
 from datetime import datetime
-from urllib.parse import urlparse
+from typing import TYPE_CHECKING, Optional
 
-from pydantic import HttpUrl
+import pytest
 
 from src.scrapper.clients import BaseClient, GitHubClient, StackOverflowClient, UpdateChecker
 
+if TYPE_CHECKING:
+    from pydantic import HttpUrl
+
 
 class FakeResponse:
-    def __init__(self, status: int, json_data: dict = None):
+    def __init__(self, status: int, json_data: Optional[dict] = None) -> None:
         self.status = status
         self._json_data = json_data or {}
 
@@ -23,7 +25,7 @@ class FakeResponse:
 
 
 class FakeGetContext:
-    def __init__(self, fake_get, url, kwargs):
+    def __init__(self, fake_get, url, kwargs) -> None:
         self.fake_get = fake_get
         self.url = url
         self.kwargs = kwargs
@@ -38,7 +40,7 @@ class FakeGetContext:
 
 
 class FakeSession:
-    def __init__(self, fake_get):
+    def __init__(self, fake_get) -> None:
         self.fake_get = fake_get
 
     def get(self, url, **kwargs):
@@ -61,41 +63,43 @@ async def fake_get_stackoverflow_failure(url, **kwargs):
     return FakeResponse(404)
 
 
-def test_parse_github_url_valid():
+def test_parse_github_url_valid() -> None:
     owner, repo = BaseClient._parse_github_url("https://github.com/owner/repo")
     assert owner == "owner"
     assert repo == "repo"
 
 
-def test_parse_github_url_invalid_domain():
+def test_parse_github_url_invalid_domain() -> None:
     owner, repo = BaseClient._parse_github_url("https://example.com/owner/repo")
-    assert owner is None and repo is None
+    assert owner is None
+    assert repo is None
 
 
-def test_parse_github_url_insufficient_parts():
+def test_parse_github_url_insufficient_parts() -> None:
     owner, repo = BaseClient._parse_github_url("https://github.com/owner")
-    assert owner is None and repo is None
+    assert owner is None
+    assert repo is None
 
 
-def test_parse_stackoverflow_url_valid():
+def test_parse_stackoverflow_url_valid() -> None:
     question_id = BaseClient._parse_stackoverflow_url(
-        "https://stackoverflow.com/questions/1234567/title"
+        "https://stackoverflow.com/questions/1234567/title",
     )
     assert question_id == "1234567"
 
 
-def test_parse_stackoverflow_url_invalid_domain():
+def test_parse_stackoverflow_url_invalid_domain() -> None:
     question_id = BaseClient._parse_stackoverflow_url("https://example.com/questions/1234567/title")
     assert question_id is None
 
 
-def test_parse_stackoverflow_url_invalid_path():
+def test_parse_stackoverflow_url_invalid_path() -> None:
     question_id = BaseClient._parse_stackoverflow_url("https://stackoverflow.com/tags/python")
     assert question_id is None
 
 
 @pytest.mark.asyncio
-async def test_github_get_last_update_success():
+async def test_github_get_last_update_success() -> None:
     session = FakeSession(fake_get_github_success)
     client = GitHubClient(session)
     url: HttpUrl = "https://github.com/owner/repo"
@@ -105,7 +109,7 @@ async def test_github_get_last_update_success():
 
 
 @pytest.mark.asyncio
-async def test_github_get_last_update_invalid_url():
+async def test_github_get_last_update_invalid_url() -> None:
     session = FakeSession(fake_get_github_success)
     client = GitHubClient(session)
     url: HttpUrl = "https://notgithub.com/owner/repo"
@@ -114,7 +118,7 @@ async def test_github_get_last_update_invalid_url():
 
 
 @pytest.mark.asyncio
-async def test_github_get_last_update_failure():
+async def test_github_get_last_update_failure() -> None:
     session = FakeSession(fake_get_github_failure)
     client = GitHubClient(session)
     url: HttpUrl = "https://github.com/owner/repo"
@@ -123,7 +127,7 @@ async def test_github_get_last_update_failure():
 
 
 @pytest.mark.asyncio
-async def test_stackoverflow_get_last_update_success():
+async def test_stackoverflow_get_last_update_success() -> None:
     session = FakeSession(fake_get_stackoverflow_success)
     client = StackOverflowClient(session)
     url: HttpUrl = "https://stackoverflow.com/questions/1234567/title"
@@ -133,7 +137,7 @@ async def test_stackoverflow_get_last_update_success():
 
 
 @pytest.mark.asyncio
-async def test_stackoverflow_get_last_update_invalid_url():
+async def test_stackoverflow_get_last_update_invalid_url() -> None:
     session = FakeSession(fake_get_stackoverflow_success)
     client = StackOverflowClient(session)
     url: HttpUrl = "https://notoverflow.com/questions/1234567/title"
@@ -142,7 +146,7 @@ async def test_stackoverflow_get_last_update_invalid_url():
 
 
 @pytest.mark.asyncio
-async def test_stackoverflow_get_last_update_failure():
+async def test_stackoverflow_get_last_update_failure() -> None:
     session = FakeSession(fake_get_stackoverflow_failure)
     client = StackOverflowClient(session)
     url: HttpUrl = "https://stackoverflow.com/questions/1234567/title"
@@ -151,7 +155,7 @@ async def test_stackoverflow_get_last_update_failure():
 
 
 @pytest.mark.asyncio
-async def test_update_checker_github():
+async def test_update_checker_github() -> None:
     session = FakeSession(fake_get_github_success)
     checker = UpdateChecker(session)
     url: HttpUrl = "https://github.com/owner/repo"
@@ -161,7 +165,7 @@ async def test_update_checker_github():
 
 
 @pytest.mark.asyncio
-async def test_update_checker_stackoverflow():
+async def test_update_checker_stackoverflow() -> None:
     session = FakeSession(fake_get_stackoverflow_success)
     checker = UpdateChecker(session)
     url: HttpUrl = "https://stackoverflow.com/questions/1234567/title"
@@ -171,7 +175,7 @@ async def test_update_checker_stackoverflow():
 
 
 @pytest.mark.asyncio
-async def test_update_checker_unknown_url():
+async def test_update_checker_unknown_url() -> None:
     session = FakeSession(lambda url, **kwargs: FakeResponse(200, {}))
     checker = UpdateChecker(session)
     url: HttpUrl = "https://example.com"

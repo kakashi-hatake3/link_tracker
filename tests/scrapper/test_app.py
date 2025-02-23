@@ -1,13 +1,14 @@
-import pytest
 import aiohttp
+import pytest
 from fastapi.testclient import TestClient
+
 from src.scrapper.app import app
 from src.scrapper.storage import ScrapperStorage
 
 
 @pytest.fixture(autouse=True)
-def disable_update_notification(monkeypatch):
-    async def fake_send_update_notification(self, update):
+def disable_update_notification(monkeypatch) -> None:
+    async def fake_send_update_notification(self, update) -> None:
         return
 
     monkeypatch.setattr(
@@ -22,7 +23,7 @@ def client():
         yield client
 
 
-def test_app_lifespan(client: TestClient):
+def test_app_lifespan(client: TestClient) -> None:
     state = client.app.state
     assert isinstance(state.storage, ScrapperStorage)
     assert isinstance(state.session, aiohttp.ClientSession)
