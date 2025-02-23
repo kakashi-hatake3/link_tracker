@@ -86,7 +86,7 @@ async def test_add_link_success(monkeypatch):
         "id": 1,
         "url": "https://example.com",
         "tags": ["Test description"],
-        "filters": []
+        "filters": [],
     }
 
     async def fake_post(url, **kwargs):
@@ -117,17 +117,14 @@ async def test_add_link_failure(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_remove_link_success(monkeypatch):
-    fake_link_response = {
-        "id": 2,
-        "url": "https://example.com",
-        "tags": [],
-        "filters": []
-    }
+    fake_link_response = {"id": 2, "url": "https://example.com", "tags": [], "filters": []}
 
     async def fake_delete(url, **kwargs):
         return FakeResponse(200, json_data=fake_link_response)
 
-    monkeypatch.setattr(aiohttp, "ClientSession", lambda: FakeClientSession(fake_delete=fake_delete))
+    monkeypatch.setattr(
+        aiohttp, "ClientSession", lambda: FakeClientSession(fake_delete=fake_delete)
+    )
 
     client = ScrapperClient(base_url="http://testserver")
     result = await client.remove_link(123, "https://example.com")
@@ -141,7 +138,9 @@ async def test_remove_link_failure(monkeypatch):
     async def fake_delete(url, **kwargs):
         return FakeResponse(404)
 
-    monkeypatch.setattr(aiohttp, "ClientSession", lambda: FakeClientSession(fake_delete=fake_delete))
+    monkeypatch.setattr(
+        aiohttp, "ClientSession", lambda: FakeClientSession(fake_delete=fake_delete)
+    )
 
     client = ScrapperClient(base_url="http://testserver")
     result = await client.remove_link(123, "https://example.com")
@@ -151,15 +150,8 @@ async def test_remove_link_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_links_success(monkeypatch):
     fake_list_links_response = {
-        "links": [
-            {
-                "id": 1,
-                "url": "https://example.com",
-                "tags": ["tag1"],
-                "filters": []
-            }
-        ],
-        "size": 1
+        "links": [{"id": 1, "url": "https://example.com", "tags": ["tag1"], "filters": []}],
+        "size": 1,
     }
 
     async def fake_get(url, **kwargs):

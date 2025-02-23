@@ -48,12 +48,14 @@ class FakeSession:
 async def fake_get_github_success(url, **kwargs):
     return FakeResponse(200, {"updated_at": "2023-02-22T10:00:00Z"})
 
+
 async def fake_get_github_failure(url, **kwargs):
     return FakeResponse(404)
 
 
 async def fake_get_stackoverflow_success(url, **kwargs):
     return FakeResponse(200, {"items": [{"last_activity_date": 1677052800}]})
+
 
 async def fake_get_stackoverflow_failure(url, **kwargs):
     return FakeResponse(404)
@@ -64,21 +66,28 @@ def test_parse_github_url_valid():
     assert owner == "owner"
     assert repo == "repo"
 
+
 def test_parse_github_url_invalid_domain():
     owner, repo = BaseClient._parse_github_url("https://example.com/owner/repo")
     assert owner is None and repo is None
+
 
 def test_parse_github_url_insufficient_parts():
     owner, repo = BaseClient._parse_github_url("https://github.com/owner")
     assert owner is None and repo is None
 
+
 def test_parse_stackoverflow_url_valid():
-    question_id = BaseClient._parse_stackoverflow_url("https://stackoverflow.com/questions/1234567/title")
+    question_id = BaseClient._parse_stackoverflow_url(
+        "https://stackoverflow.com/questions/1234567/title"
+    )
     assert question_id == "1234567"
+
 
 def test_parse_stackoverflow_url_invalid_domain():
     question_id = BaseClient._parse_stackoverflow_url("https://example.com/questions/1234567/title")
     assert question_id is None
+
 
 def test_parse_stackoverflow_url_invalid_path():
     question_id = BaseClient._parse_stackoverflow_url("https://stackoverflow.com/tags/python")
@@ -94,6 +103,7 @@ async def test_github_get_last_update_success():
     expected = datetime.fromisoformat("2023-02-22T10:00:00+00:00")
     assert result == expected
 
+
 @pytest.mark.asyncio
 async def test_github_get_last_update_invalid_url():
     session = FakeSession(fake_get_github_success)
@@ -101,6 +111,7 @@ async def test_github_get_last_update_invalid_url():
     url: HttpUrl = "https://notgithub.com/owner/repo"
     result = await client.get_last_update(url)
     assert result is None
+
 
 @pytest.mark.asyncio
 async def test_github_get_last_update_failure():
@@ -120,6 +131,7 @@ async def test_stackoverflow_get_last_update_success():
     expected = datetime.fromtimestamp(1677052800)
     assert result == expected
 
+
 @pytest.mark.asyncio
 async def test_stackoverflow_get_last_update_invalid_url():
     session = FakeSession(fake_get_stackoverflow_success)
@@ -127,6 +139,7 @@ async def test_stackoverflow_get_last_update_invalid_url():
     url: HttpUrl = "https://notoverflow.com/questions/1234567/title"
     result = await client.get_last_update(url)
     assert result is None
+
 
 @pytest.mark.asyncio
 async def test_stackoverflow_get_last_update_failure():
@@ -146,6 +159,7 @@ async def test_update_checker_github():
     expected = datetime.fromisoformat("2023-02-22T10:00:00+00:00")
     assert result == expected
 
+
 @pytest.mark.asyncio
 async def test_update_checker_stackoverflow():
     session = FakeSession(fake_get_stackoverflow_success)
@@ -154,6 +168,7 @@ async def test_update_checker_stackoverflow():
     result = await checker.check_updates(url)
     expected = datetime.fromtimestamp(1677052800)
     assert result == expected
+
 
 @pytest.mark.asyncio
 async def test_update_checker_unknown_url():

@@ -12,7 +12,9 @@ class FakeScrapper:
         return True
 
     async def add_link(self, chat_id: int, url, description=None):
-        FakeLinkResponse = type("FakeLinkResponse", (), {"url": url, "tags": [description] if description else []})
+        FakeLinkResponse = type(
+            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []}
+        )
         return FakeLinkResponse
 
     async def remove_link(self, chat_id: int, url):
@@ -23,7 +25,9 @@ class FakeScrapper:
 
     async def get_links(self, chat_id: int):
         if chat_id == 12345:
-            FakeLinkResponse = type("FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]})
+            FakeLinkResponse = type(
+                "FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]}
+            )
             return [FakeLinkResponse]
         return []
 
@@ -66,7 +70,9 @@ class CustomFakeScrapper:
     async def add_link(self, chat_id: int, url, description=None):
         if self._add_link_return is None:
             return None
-        FakeLinkResponse = type("FakeLinkResponse", (), {"url": url, "tags": [description] if description else []})
+        FakeLinkResponse = type(
+            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []}
+        )
         return FakeLinkResponse
 
     async def remove_link(self, chat_id: int, url):
@@ -194,6 +200,7 @@ async def test_track_handler_missing_url():
     await handler._track_handler(fake_event)
     assert any("Пожалуйста, укажите URL для отслеживания" in reply for reply in fake_event.replies)
 
+
 @pytest.mark.asyncio
 async def test_track_handler_scrapper_returns_none():
     fake_client = FakeClient()
@@ -204,6 +211,7 @@ async def test_track_handler_scrapper_returns_none():
     await handler._track_handler(fake_event)
     assert any("Эта ссылка уже отслеживается" in reply for reply in fake_event.replies)
 
+
 @pytest.mark.asyncio
 async def test_untrack_handler_missing_url():
     fake_client = FakeClient()
@@ -212,7 +220,11 @@ async def test_untrack_handler_missing_url():
     handler.scrapper = CustomFakeScrapper()
     fake_event = FakeEvent("/untrack", chat_id=333)
     await handler._untrack_handler(fake_event)
-    assert any("Пожалуйста, укажите URL для прекращения отслеживания" in reply for reply in fake_event.replies)
+    assert any(
+        "Пожалуйста, укажите URL для прекращения отслеживания" in reply
+        for reply in fake_event.replies
+    )
+
 
 @pytest.mark.asyncio
 async def test_list_handler_exception():
@@ -223,6 +235,7 @@ async def test_list_handler_exception():
     fake_event = FakeEvent("/list", chat_id=444)
     await handler._list_handler(fake_event)
     assert any("Ошибка при получении списка ссылок" in reply for reply in fake_event.replies)
+
 
 @pytest.mark.asyncio
 async def test_untrack_handler_empty_text():
