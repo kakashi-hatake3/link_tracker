@@ -1,29 +1,38 @@
 import asyncio
-import json
+import contextlib
 import logging
-from datetime import datetime
-from typing import Dict, Set
+from typing import TYPE_CHECKING, Dict, Set
+
 import aiohttp
 from fastapi.encoders import jsonable_encoder
 
-from src.scrapper.storage import ScrapperStorage
-from src.scrapper.clients import UpdateChecker
 from src.models import LinkUpdate
+from src.scrapper.clients import UpdateChecker
+from src.scrapper.storage import ScrapperStorage
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+
 class UpdateScheduler:
-    def __init__(self, storage: ScrapperStorage, update_checker: UpdateChecker, bot_base_url: str = "http://localhost:7777"):
+    def __init__(
+        self,
+        storage: ScrapperStorage,
+        update_checker: UpdateChecker,
+        bot_base_url: str = "http://localhost:7777",
+    ) -> None:
         self.storage = storage
         self.update_checker = update_checker
-        self.bot_base_url = bot_base_url.rstrip('/')
+        self.bot_base_url = bot_base_url.rstrip("/")
         self._last_check: Dict[str, datetime] = {}
         self._running = False
         self._task: asyncio.Task | None = None
         self._next_update_id = 1
 
-    async def start(self, check_interval: int = 10):
-        """Запускает планировщик с указанным интервалом проверки в секундах"""
+    async def start(self, check_interval: int = 10) -> None:
+        """Запускает планировщик с указанным интервалом проверки в секундах."""
         if self._running:
             return
 
@@ -31,32 +40,30 @@ class UpdateScheduler:
         self._task = asyncio.create_task(self._check_loop(check_interval))
         logger.info("Update scheduler started with interval %d seconds", check_interval)
 
-    async def stop(self):
-        """Останавливает планировщик"""
+    async def stop(self) -> None:
+        """Останавливает планировщик."""
         if not self._running or not self._task:
             return
 
         self._running = False
         self._task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         logger.info("Update scheduler stopped")
 
-    async def _check_loop(self, interval: int):
-        """Основной цикл проверки обновлений"""
+    async def _check_loop(self, interval: int) -> None:
+        """Основной цикл проверки обновлений."""
         while self._running:
             try:
-                logger.info('updating..........')
+                logger.info("updating..........")
                 await self._check_all_links()
             except Exception as e:
-                logger.error("Error checking updates: %s", str(e))
+                logger.exception("Error checking updates: %s", str(e))
 
             await asyncio.sleep(interval)
 
-    async def _check_all_links(self):
-        """Проверяет обновления для всех отслеживаемых ссылок"""
+    async def _check_all_links(self) -> None:
+        """Проверяет обновления для всех отслеживаемых ссылок."""
         # Собираем все уникальные ссылки из всех чатов
         all_links: Dict[str, Set[int]] = {}
         for chat_info in self.storage._chats.values():
@@ -83,7 +90,7 @@ class UpdateScheduler:
                         update = LinkUpdate(
                             id=self._next_update_id,
                             url=url_str,
-                            tgChatIds=list(chat_ids)
+                            tgChatIds=list(chat_ids),
                         )
                         self._next_update_id += 1
 
@@ -93,10 +100,10 @@ class UpdateScheduler:
                     self._last_check[url_str] = last_update
 
             except Exception as e:
-                logger.error("Error checking URL %s: %s", url_str, str(e))
+                logger.exception("Error checking URL %s: %s", url_str, str(e))
 
-    async def _send_update_notification(self, update: LinkUpdate):
-        """Отправляет уведомление об обновлении через API бота"""
+    async def _send_update_notification(self, update: LinkUpdate) -> None:
+        """Отправляет уведомление об обновлении через API бота."""
         try:
             bot_api_url = f"{self.bot_base_url}/api/v1/updates"
             logger.debug("before session")
@@ -110,8 +117,11 @@ class UpdateScheduler:
                         error_data = await response.json()
                         logger.error("Failed to send update notification: %s", error_data)
                     else:
-                        logger.info("Successfully sent update notification for URL %s to %d chats",
-                                  update.url, len(update.tg_chat_ids))
+                        logger.info(
+                            "Successfully sent update notification for URL %s to %d chats",
+                            update.url,
+                            len(update.tg_chat_ids),
+                        )
 
         except Exception as e:
-            logger.error("Error sending update notification: %s", str(e)) 
+            logger.exception("Error sending update notification: %s", str(e))

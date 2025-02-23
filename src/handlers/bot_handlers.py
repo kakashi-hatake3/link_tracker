@@ -1,15 +1,12 @@
-from typing import Optional
 from urllib.parse import urlparse
 
-from telethon import TelegramClient, events, types
+from telethon import TelegramClient, events
 from telethon.events import NewMessage
 from telethon.tl.functions.bots import SetBotCommandsRequest
 from telethon.tl.types import BotCommand, BotCommandScopeDefault
-from pydantic import HttpUrl
 
-from src.models import Link
-from src.storage import Storage
 from src.scrapper_client import ScrapperClient
+from src.storage import Storage
 
 HELP_MESSAGE = """
 Доступные команды:
@@ -20,22 +17,23 @@ HELP_MESSAGE = """
 /list - показать список отслеживаемых ссылок
 """
 
+
 class BotHandler:
-    def __init__(self, client: TelegramClient, storage: Storage):
+    def __init__(self, client: TelegramClient, storage: Storage) -> None:
         self.client = client
         self.storage = storage
         self.scrapper = ScrapperClient()
         self._setup_handlers()
 
     @classmethod
-    async def create(cls, client: TelegramClient, storage: Storage) -> 'BotHandler':
-        """Фабричный метод для создания экземпляра BotHandler"""
+    async def create(cls, client: TelegramClient, storage: Storage) -> "BotHandler":
+        """Фабричный метод для создания экземпляра BotHandler."""
         handler = cls(client, storage)
         await handler._register_commands()
         return handler
 
     async def _register_commands(self) -> None:
-        """Регистрирует команды бота в Telegram"""
+        """Регистрирует команды бота в Telegram."""
         commands = [
             BotCommand(command="start", description="Регистрация пользователя"),
             BotCommand(command="help", description="Вывод списка доступных команд"),
@@ -43,24 +41,29 @@ class BotHandler:
             BotCommand(command="untrack", description="Прекратить отслеживание ссылки"),
             BotCommand(command="list", description="Показать список отслеживаемых ссылок"),
         ]
-        await self.client(SetBotCommandsRequest(
-            scope=BotCommandScopeDefault(),
-            lang_code="ru",
-            commands=commands
-        ))
+        await self.client(
+            SetBotCommandsRequest(
+                scope=BotCommandScopeDefault(),
+                lang_code="ru",
+                commands=commands,
+            ),
+        )
 
     def _setup_handlers(self) -> None:
-        self.client.add_event_handler(self._start_handler, events.NewMessage(pattern='/start'))
-        self.client.add_event_handler(self._help_handler, events.NewMessage(pattern='/help'))
-        self.client.add_event_handler(self._track_handler, events.NewMessage(pattern='/track'))
-        self.client.add_event_handler(self._untrack_handler, events.NewMessage(pattern='/untrack'))
-        self.client.add_event_handler(self._list_handler, events.NewMessage(pattern='/list'))
-        self.client.add_event_handler(self._unknown_command_handler, events.NewMessage(pattern='/[a-zA-Z]+'))
+        self.client.add_event_handler(self._start_handler, events.NewMessage(pattern="/start"))
+        self.client.add_event_handler(self._help_handler, events.NewMessage(pattern="/help"))
+        self.client.add_event_handler(self._track_handler, events.NewMessage(pattern="/track"))
+        self.client.add_event_handler(self._untrack_handler, events.NewMessage(pattern="/untrack"))
+        self.client.add_event_handler(self._list_handler, events.NewMessage(pattern="/list"))
+        self.client.add_event_handler(
+            self._unknown_command_handler,
+            events.NewMessage(pattern="/[a-zA-Z]+"),
+        )
 
     async def _start_handler(self, event: NewMessage.Event) -> None:
         chat_id = event.chat_id
         self.storage.add_user(chat_id)
-        
+
         # Регистрируем чат в scrapper API
         if await self.scrapper.register_chat(chat_id):
             await event.reply("Добро пожаловать! Используйте /help для просмотра доступных команд.")
@@ -73,7 +76,7 @@ class BotHandler:
     async def _track_handler(self, event: NewMessage.Event) -> None:
         if not event.message.text:
             return
-            
+
         parts = event.message.text.split(maxsplit=2)
         if len(parts) < 2:
             await event.reply("Пожалуйста, укажите URL для отслеживания.")
@@ -86,20 +89,22 @@ class BotHandler:
             parsed_url = urlparse(url)
             if not all([parsed_url.scheme, parsed_url.netloc]):
                 raise ValueError("Invalid URL")
-                
+
             # Добавляем ссылку через scrapper API
             link_response = await self.scrapper.add_link(event.chat_id, url, description)
             if link_response:
                 await event.reply(f"Ссылка {url} добавлена для отслеживания.")
             else:
-                await event.reply("Эта ссылка уже отслеживается или произошла ошибка при добавлении.")
+                await event.reply(
+                    "Эта ссылка уже отслеживается или произошла ошибка при добавлении.",
+                )
         except Exception as e:
-            await event.reply(f"Ошибка при добавлении ссылки: {str(e)}")
+            await event.reply(f"Ошибка при добавлении ссылки: {e!s}")
 
     async def _untrack_handler(self, event: NewMessage.Event) -> None:
         if not event.message.text:
             return
-            
+
         parts = event.message.text.split()
         if len(parts) < 2:
             await event.reply("Пожалуйста, укажите URL для прекращения отслеживания.")
@@ -114,13 +119,13 @@ class BotHandler:
             else:
                 await event.reply("Указанная ссылка не отслеживается.")
         except Exception as e:
-            await event.reply(f"Ошибка при удалении ссылки: {str(e)}")
+            await event.reply(f"Ошибка при удалении ссылки: {e!s}")
 
     async def _list_handler(self, event: NewMessage.Event) -> None:
         try:
             # Получаем список ссылок через scrapper API
             links = await self.scrapper.get_links(event.chat_id)
-            
+
             if not links:
                 await event.reply("Список отслеживаемых ссылок пуст.")
                 return
@@ -131,14 +136,16 @@ class BotHandler:
                 if link.tags:
                     message += f" - {', '.join(link.tags)}"
                 message += "\n"
-            
+
             await event.reply(message)
         except Exception as e:
-            await event.reply(f"Ошибка при получении списка ссылок: {str(e)}")
+            await event.reply(f"Ошибка при получении списка ссылок: {e!s}")
 
-    async def _unknown_command_handler(self, event: NewMessage.Event):
-        if event.message.text and event.message.text.startswith('/'):
-            known_commands = {'/start', '/help', '/track', '/untrack', '/list', 'chat_id'}
+    async def _unknown_command_handler(self, event: NewMessage.Event) -> None:
+        if event.message.text and event.message.text.startswith("/"):
+            known_commands = {"/start", "/help", "/track", "/untrack", "/list", "chat_id"}
             command = event.message.text.split()[0]
             if command not in known_commands:
-                await event.reply("Неизвестная команда. Используйте /help для просмотра доступных команд.") 
+                await event.reply(
+                    "Неизвестная команда. Используйте /help для просмотра доступных команд.",
+                )

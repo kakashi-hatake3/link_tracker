@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional
-from src.models import User, Link
+
+from src.models import Link, User
+
 
 class Storage:
     def __init__(self) -> None:
@@ -16,10 +18,10 @@ class Storage:
         user = self.get_user(chat_id)
         if not user:
             return False
-        
+
         if any(existing.url == link.url for existing in user.tracked_links):
             return False
-            
+
         user.tracked_links.append(link)
         return True
 
@@ -27,11 +29,11 @@ class Storage:
         user = self.get_user(chat_id)
         if not user:
             return False
-            
+
         initial_length = len(user.tracked_links)
         user.tracked_links = [link for link in user.tracked_links if str(link.url) != url]
         return len(user.tracked_links) < initial_length
 
     def get_links(self, chat_id: int) -> List[Link]:
         user = self.get_user(chat_id)
-        return user.tracked_links if user else [] 
+        return user.tracked_links if user else []

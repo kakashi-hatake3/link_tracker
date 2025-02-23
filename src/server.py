@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -18,9 +17,9 @@ from telethon.errors.rpcerrorlist import ApiIdInvalidError
 
 from src.api import router
 from src.api.ping import router as ping_router
+from src.handlers.bot_handlers import BotHandler
 from src.settings import TGBotSettings
 from src.storage import Storage
-from src.handlers.bot_handlers import BotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @asynccontextmanager
 async def default_lifespan(application: FastAPI) -> AsyncIterator[None]:
-
     logger.debug("Running application lifespan ...")
 
     loop = asyncio.get_event_loop()
@@ -41,24 +39,27 @@ async def default_lifespan(application: FastAPI) -> AsyncIterator[None]:
             max_workers=4,
         ),
     )
-    application.settings = TGBotSettings() # type: ignore[call-arg, attr-defined]
-    application.storage = Storage() # type: ignore[attr-defined]
+    application.settings = TGBotSettings()  # type: ignore[call-arg, attr-defined]
+    application.storage = Storage()  # type: ignore[attr-defined]
 
     client = TelegramClient(
         "fastapi_bot_session",
-        application.settings.api_id, # type: ignore[attr-defined]
-        application.settings.api_hash, # type: ignore[attr-defined]
+        application.settings.api_id,  # type: ignore[attr-defined]
+        application.settings.api_hash,  # type: ignore[attr-defined]
     ).start(
-        bot_token=application.settings.token, # type: ignore[attr-defined]
+        bot_token=application.settings.token,  # type: ignore[attr-defined]
     )
 
     async with AsyncExitStack() as stack:
         try:
-            application.tg_client = await stack.enter_async_context(await client) # type: ignore[attr-defined]
-            application.bot_handler = await BotHandler.create(application.tg_client, application.storage) # type: ignore[attr-defined]
+            application.tg_client = await stack.enter_async_context(await client)  # type: ignore[attr-defined]
+            application.bot_handler = await BotHandler.create(
+                application.tg_client,
+                application.storage,
+            )  # type: ignore[attr-defined]
             logger.info("Telegram bot initialized successfully")
         except ApiIdInvalidError:
-            logger.error("Failed to initialize Telegram client: Invalid API credentials")
+            logger.exception("Failed to initialize Telegram client: Invalid API credentials")
         yield
         await stack.aclose()
 

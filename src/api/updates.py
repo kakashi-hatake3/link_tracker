@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Request, HTTPException
-from src.models import LinkUpdate, ApiErrorResponse
+from fastapi import APIRouter, HTTPException, Request
+
+from src.models import ApiErrorResponse, LinkUpdate
 
 router = APIRouter()
 
 
-@router.post("/updates", 
-             responses={
-                 200: {"description": "Обновление обработано"},
-                 400: {"model": ApiErrorResponse, "description": "Некорректные параметры запроса"}
-             })
+@router.post(
+    "/updates",
+    responses={
+        200: {"description": "Обновление обработано"},
+        400: {"model": ApiErrorResponse, "description": "Некорректные параметры запроса"},
+    },
+)
 async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]:
     try:
         app = request.app
@@ -27,6 +30,6 @@ async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]
                 description="Ошибка при обработке обновления",
                 code="UPDATE_PROCESSING_ERROR",
                 exceptionName=e.__class__.__name__,
-                exceptionMessage=str(e)
-            ).model_dump()
-        ) 
+                exceptionMessage=str(e),
+            ).model_dump(),
+        )
