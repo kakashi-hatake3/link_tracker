@@ -17,6 +17,7 @@ from telethon import TelegramClient
 from telethon.errors.rpcerrorlist import ApiIdInvalidError
 
 from src.api import router
+from src.api.ping import router as ping_router
 from src.settings import TGBotSettings
 from src.storage import Storage
 from src.handlers.bot_handlers import BotHandler
@@ -65,13 +66,15 @@ async def default_lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="telegram_bot_app",
+    version="1.0.0",
+    title="Telegram Bot API",
     lifespan=default_lifespan,
 )
 
 app.exception_handler(RequestValidationError)(validation_exception_handler)
 
 app.include_router(router=router, prefix="/api/v1")
+app.include_router(router=ping_router, prefix="/api/v1")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
