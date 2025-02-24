@@ -53,9 +53,9 @@ async def default_lifespan(application: FastAPI) -> AsyncIterator[None]:
     async with AsyncExitStack() as stack:
         try:
             application.tg_client = await stack.enter_async_context(await client)  # type: ignore[attr-defined]
-            application.bot_handler = await BotHandler.create( # type: ignore[attr-defined]
-                application.tg_client, # type: ignore[attr-defined]
-                application.storage, # type: ignore[attr-defined]
+            application.bot_handler = await BotHandler.create(  # type: ignore[attr-defined]
+                application.tg_client,  # type: ignore[attr-defined]
+                application.storage,  # type: ignore[attr-defined]
             )
             logger.info("Telegram bot initialized successfully")
         except ApiIdInvalidError:

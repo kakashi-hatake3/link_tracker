@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Dict, Set
 
 import aiohttp
 from fastapi.encoders import jsonable_encoder
-from pydantic import HttpUrl
 from starlette.status import HTTP_200_OK
 
 from src.models import LinkUpdate
@@ -97,7 +96,7 @@ class UpdateScheduler:
                         # Создаем объект обновления
                         update = LinkUpdate(
                             id=self._next_update_id,
-                            url=url_str,   # type: ignore[arg-type]
+                            url=url_str,  # type: ignore[arg-type]
                             tgChatIds=list(chat_ids),
                         )
                         self._next_update_id += 1
