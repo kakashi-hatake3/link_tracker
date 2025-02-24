@@ -23,7 +23,7 @@ router = APIRouter()
         400: {"model": ApiErrorResponse},
     },
 )
-async def register_chat(id: int, request: Request):
+async def register_chat(id: int, request: Request) -> dict[str, str]:
     try:
         storage: ScrapperStorage = request.app.state.storage
         storage.add_chat(id)
@@ -48,7 +48,7 @@ async def register_chat(id: int, request: Request):
         404: {"model": ApiErrorResponse},
     },
 )
-async def remove_chat(id: int, request: Request):
+async def remove_chat(id: int, request: Request) -> dict[str, str]:
     try:
         storage: ScrapperStorage = request.app.state.storage
         if storage.remove_chat(id):
@@ -82,7 +82,9 @@ async def remove_chat(id: int, request: Request):
         400: {"model": ApiErrorResponse},
     },
 )
-async def get_links(request: Request, tg_chat_id: int = Header(..., alias="Tg-Chat-Id")):
+async def get_links(
+    request: Request, tg_chat_id: int = Header(..., alias="Tg-Chat-Id"),
+) -> ListLinksResponse:
     try:
         storage: ScrapperStorage = request.app.state.storage
         links = storage.get_links(tg_chat_id)
@@ -111,7 +113,7 @@ async def add_link(
     request: Request,
     link_request: AddLinkRequest,
     tg_chat_id: int = Header(..., alias="Tg-Chat-Id"),
-):
+) -> LinkResponse:
     try:
         storage: ScrapperStorage = request.app.state.storage
         link = storage.add_link(
@@ -156,7 +158,7 @@ async def remove_link(
     request: Request,
     link_request: RemoveLinkRequest,
     tg_chat_id: int = Header(..., alias="Tg-Chat-Id"),
-):
+) -> LinkResponse:
     try:
         storage: ScrapperStorage = request.app.state.storage
         link = storage.remove_link(tg_chat_id, link_request.link)

@@ -3,6 +3,7 @@ from typing import List, Optional
 import aiohttp
 from fastapi.encoders import jsonable_encoder
 from pydantic import HttpUrl
+from starlette.status import HTTP_200_OK
 
 from src.scrapper.models import AddLinkRequest, LinkResponse, ListLinksResponse, RemoveLinkRequest
 
@@ -14,7 +15,7 @@ class ScrapperClient:
     async def register_chat(self, chat_id: int) -> bool:
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.base_url}/tg-chat/{chat_id}") as response:
-                return response.status == 200
+                return response.status == HTTP_200_OK
 
     async def add_link(
         self,
@@ -38,7 +39,7 @@ class ScrapperClient:
                 headers=headers,
                 json=jsonable_encoder(request),
             ) as response:
-                if response.status == 200:
+                if response.status == HTTP_200_OK:
                     return LinkResponse.model_validate(await response.json())
                 return None
 
@@ -52,7 +53,7 @@ class ScrapperClient:
                 headers=headers,
                 json=jsonable_encoder(request),
             ) as response:
-                if response.status == 200:
+                if response.status == HTTP_200_OK:
                     return LinkResponse.model_validate(await response.json())
                 return None
 
@@ -60,7 +61,7 @@ class ScrapperClient:
         async with aiohttp.ClientSession() as session:
             headers = {"Tg-Chat-Id": str(chat_id)}
             async with session.get(f"{self.base_url}/links", headers=headers) as response:
-                if response.status == 200:
+                if response.status == HTTP_200_OK:
                     data = await response.json()
                     return ListLinksResponse.model_validate(data).links
                 return []

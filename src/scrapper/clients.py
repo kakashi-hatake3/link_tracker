@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 from pydantic import HttpUrl
+from starlette.status import HTTP_200_OK
 
 logger = logging.getLogger(__name__)
 
@@ -16,24 +17,26 @@ class BaseClient:
     @staticmethod
     def _parse_github_url(url: str) -> tuple[Optional[str], Optional[str]]:
         """Извлекает owner и repo из GitHub URL."""
+        max_split = 2
         parsed = urlparse(url)
         if parsed.netloc != "github.com":
             return None, None
 
         parts = parsed.path.strip("/").split("/")
-        if len(parts) >= 2:
+        if len(parts) >= max_split:
             return parts[0], parts[1]
         return None, None
 
     @staticmethod
     def _parse_stackoverflow_url(url: str) -> Optional[str]:
         """Извлекает ID вопроса из StackOverflow URL."""
+        max_split = 2
         parsed = urlparse(url)
         if "stackoverflow.com" not in parsed.netloc:
             return None
 
         parts = parsed.path.strip("/").split("/")
-        if len(parts) >= 2 and parts[0] == "questions":
+        if len(parts) >= max_split and parts[0] == "questions":
             return parts[1]
         return None
 
@@ -51,7 +54,7 @@ class GitHubClient(BaseClient):
         logger.debug("before getting api")
         async with self.session.get(api_url) as response:
             logger.debug("api response: %d", response.status)
-            if response.status != 200:
+            if response.status != HTTP_200_OK:
                 return None
 
             data = await response.json()
@@ -80,7 +83,7 @@ class StackOverflowClient(BaseClient):
         }
 
         async with self.session.get(api_url, params=params) as response:
-            if response.status != 200:
+            if response.status != HTTP_200_OK:
                 return None
 
             data = await response.json()

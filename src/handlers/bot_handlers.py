@@ -74,16 +74,17 @@ class BotHandler:
         await event.reply(HELP_MESSAGE)
 
     async def _track_handler(self, event: NewMessage.Event) -> None:
+        max_split = 2
         if not event.message.text:
             return
 
-        parts = event.message.text.split(maxsplit=2)
-        if len(parts) < 2:
+        parts = event.message.text.split(maxsplit=max_split)
+        if len(parts) < max_split:
             await event.reply("Пожалуйста, укажите URL для отслеживания.")
             return
 
         url = parts[1]
-        description = parts[2] if len(parts) > 2 else None
+        description = parts[2] if len(parts) > max_split else None
 
         try:
             parsed_url = urlparse(url)
@@ -102,11 +103,12 @@ class BotHandler:
             await event.reply(f"Ошибка при добавлении ссылки: {e!s}")
 
     async def _untrack_handler(self, event: NewMessage.Event) -> None:
+        max_split = 2
         if not event.message.text:
             return
 
         parts = event.message.text.split()
-        if len(parts) < 2:
+        if len(parts) < max_split:
             await event.reply("Пожалуйста, укажите URL для прекращения отслеживания.")
             return
 

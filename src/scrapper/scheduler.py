@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING, Dict, Set
 
 import aiohttp
 from fastapi.encoders import jsonable_encoder
+from starlette.status import HTTP_200_OK
 
 from src.models import LinkUpdate
 from src.scrapper.clients import UpdateChecker
 from src.scrapper.storage import ScrapperStorage
+
+CHECK_INTERVAL = 10
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -31,7 +34,7 @@ class UpdateScheduler:
         self._task: asyncio.Task | None = None
         self._next_update_id = 1
 
-    async def start(self, check_interval: int = 10) -> None:
+    async def start(self, check_interval: int = CHECK_INTERVAL) -> None:
         """Запускает планировщик с указанным интервалом проверки в секундах."""
         if self._running:
             return
@@ -62,8 +65,7 @@ class UpdateScheduler:
 
             await asyncio.sleep(interval)
 
-    async def _check_all_links(self) -> None:
-        """Проверяет обновления для всех отслеживаемых ссылок."""
+    def _get_all_links(self) -> Dict[str, Set[int]]:
         # Собираем все уникальные ссылки из всех чатов
         all_links: Dict[str, Set[int]] = {}
         for chat_info in self.storage._chats.values():
@@ -73,6 +75,11 @@ class UpdateScheduler:
                     all_links[str_url] = set()
                 all_links[str_url].add(chat_info.chat_id)
         logger.info("links: %s", all_links)
+        return all_links
+
+    async def _check_all_links(self) -> None:
+        """Проверяет обновления для всех отслеживаемых ссылок."""
+        all_links = self._get_all_links()
         # Проверяем каждую ссылку
         for url_str, chat_ids in all_links.items():
             try:
@@ -113,7 +120,7 @@ class UpdateScheduler:
                 logger.debug("getting session")
                 async with session.post(bot_api_url, json=json_data) as response:
                     logger.debug("sending request: %d", response.status)
-                    if response.status != 200:
+                    if response.status != HTTP_200_OK:
                         error_data = await response.json()
                         logger.error("Failed to send update notification: %s", error_data)
                     else:
