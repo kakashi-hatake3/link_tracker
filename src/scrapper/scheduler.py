@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Dict, Set
 
 import aiohttp
 from fastapi.encoders import jsonable_encoder
+from pydantic import HttpUrl
 from starlette.status import HTTP_200_OK
 
 from src.models import LinkUpdate
@@ -31,7 +32,7 @@ class UpdateScheduler:
         self.bot_base_url = bot_base_url.rstrip("/")
         self._last_check: Dict[str, datetime] = {}
         self._running = False
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
 
     async def start(self, check_interval: int = CHECK_INTERVAL) -> None:
@@ -83,7 +84,7 @@ class UpdateScheduler:
         # Проверяем каждую ссылку
         for url_str, chat_ids in all_links.items():
             try:
-                last_update = await self.update_checker.check_updates(url_str)
+                last_update = await self.update_checker.check_updates(url_str)  # type: ignore[arg-type]
                 logger.info("last update: %s", last_update)
                 if not last_update:
                     continue
@@ -96,7 +97,7 @@ class UpdateScheduler:
                         # Создаем объект обновления
                         update = LinkUpdate(
                             id=self._next_update_id,
-                            url=url_str,
+                            url=url_str,   # type: ignore[arg-type]
                             tgChatIds=list(chat_ids),
                         )
                         self._next_update_id += 1

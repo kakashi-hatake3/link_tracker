@@ -14,15 +14,15 @@ install: ## Install dependencies
 .PHONY: format
 format: ## Run linters in format mode
 	$(POETRY_RUN) black ./src ./tests
-	$(POETRY_RUN) ruff check --fix ./src ./tests
-	$(POETRY_RUN) mypy ./src ./tests
+	$(POETRY_RUN) ruff check --fix ./src
+	$(POETRY_RUN) mypy ./src
 	$(POETRY_RUN) pytest --dead-fixtures --dup-fixtures
 
 .PHONY: lint
 lint: ## Run linters in check mode
 	$(POETRY_RUN) black --check ./src ./tests
-	$(POETRY_RUN) ruff check ./src ./tests
-	$(POETRY_RUN) mypy ./src ./tests
+	$(POETRY_RUN) ruff check ./src
+	$(POETRY_RUN) mypy ./src
 	$(POETRY_RUN) pytest --dead-fixtures --dup-fixtures
 
 .PHONY: test

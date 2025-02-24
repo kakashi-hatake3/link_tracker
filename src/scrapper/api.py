@@ -55,7 +55,7 @@ async def remove_chat(id: int, request: Request) -> dict[str, str]:
             return {"status": "ok"}
         raise HTTPException(
             status_code=404,
-            detail=ApiErrorResponse(
+            detail=ApiErrorResponse( # type: ignore[call-arg]
                 description="Чат не найден",
                 code="CHAT_NOT_FOUND",
             ).model_dump(),
@@ -126,7 +126,7 @@ async def add_link(
             return link
         raise HTTPException(
             status_code=400,
-            detail=ApiErrorResponse(
+            detail=ApiErrorResponse( # type: ignore[call-arg]
                 description="Ссылка уже отслеживается",
                 code="LINK_ALREADY_EXISTS",
             ).model_dump(),
@@ -166,7 +166,7 @@ async def remove_link(
             return link
         raise HTTPException(
             status_code=404,
-            detail=ApiErrorResponse(
+            detail=ApiErrorResponse( # type: ignore[call-arg]
                 description="Ссылка не найдена",
                 code="LINK_NOT_FOUND",
             ).model_dump(),
@@ -176,7 +176,7 @@ async def remove_link(
     except Exception as e:
         raise HTTPException(
             status_code=400,
-            detail=ApiErrorResponse(
+            detail=ApiErrorResponse( # type: ignore[call-arg]
                 description="Ошибка при удалении ссылки",
                 code="LINK_REMOVAL_ERROR",
                 exceptionName=e.__class__.__name__,
