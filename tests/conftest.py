@@ -22,20 +22,20 @@ def mock_event() -> Mock:
     return event
 
 
-@pytest.fixture(scope="session")
-def fast_api_application() -> FastAPI:
-    app = FastAPI(
-        title="telegram_bot_app",
-        lifespan=default_lifespan,
-    )
-    app.include_router(router=router, prefix="/api/v1")
-    return app
+# @pytest.fixture(scope="session")
+# def fast_api_application() -> FastAPI:
+#     app = FastAPI(
+#         title="telegram_bot_app",
+#         lifespan=default_lifespan,
+#     )
+#     app.include_router(router=router, prefix="/api/v1")
+#     return app
 
 
-@pytest.fixture(scope="session")
-def test_client(fast_api_application: FastAPI) -> Generator[TestClient, None, None]:
-    with TestClient(
-        fast_api_application,
-        backend_options={"loop_factory": asyncio.new_event_loop},
-    ) as test_client:
-        yield test_client
+# @pytest.fixture(scope="session")
+# def test_client(fast_api_application: FastAPI) -> Generator[TestClient, None, None]:
+#     with TestClient(
+#         fast_api_application,
+#         backend_options={"loop_factory": asyncio.new_event_loop},
+#     ) as test_client:
+#         yield test_client
