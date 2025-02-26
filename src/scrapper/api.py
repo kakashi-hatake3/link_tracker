@@ -19,7 +19,7 @@ router = APIRouter()
 def raise_http_exception(description: str, code: str, status_code: int) -> None:
     raise HTTPException(
         status_code=status_code,
-        detail=ApiErrorResponse( # type: ignore[call-arg]
+        detail=ApiErrorResponse(  # type: ignore[call-arg]
             description=description,
             code=code,
         ).model_dump(),
@@ -126,6 +126,7 @@ async def add_link(
 ) -> LinkResponse | None:
     try:
         storage: ScrapperStorage = request.app.state.storage
+
         def add_link_to_storage() -> LinkResponse | None:
             link = storage.add_link(
                 tg_chat_id,
@@ -134,8 +135,7 @@ async def add_link(
                 link_request.filters,
             )
             if not link:
-                raise_http_exception("Ссылка уже отслеживается",
-                                     "LINK_ALREADY_EXISTS", 400)
+                raise_http_exception("Ссылка уже отслеживается", "LINK_ALREADY_EXISTS", 400)
             return link
 
         return add_link_to_storage()
@@ -169,11 +169,11 @@ async def remove_link(
 ) -> LinkResponse | None:
     try:
         storage: ScrapperStorage = request.app.state.storage
+
         def remove_link_from_storage() -> LinkResponse | None:
             link = storage.remove_link(tg_chat_id, link_request.link)
             if not link:
-                raise_http_exception("Ссылка не найдена",
-                                     "LINK_NOT_FOUND", 404)
+                raise_http_exception("Ссылка не найдена", "LINK_NOT_FOUND", 404)
             return link
 
         return remove_link_from_storage()

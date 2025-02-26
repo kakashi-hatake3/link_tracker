@@ -13,8 +13,10 @@ class ScrapperClient:
         self.base_url = base_url.rstrip("/")
 
     async def register_chat(self, chat_id: int) -> bool:
-        async with (aiohttp.ClientSession() as session,
-                    session.post(f"{self.base_url}/tg-chat/{chat_id}") as response):
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(f"{self.base_url}/tg-chat/{chat_id}") as response,
+        ):
             return response.status == HTTP_200_OK
 
     async def add_link(
