@@ -35,7 +35,7 @@ class UpdateScheduler:
         self._next_update_id = 1
 
     async def start(self, check_interval: int = CHECK_INTERVAL) -> None:
-        """Запускает планировщик с указанным интервалом проверки в секундах."""
+        """Запускает планировщик c указанным интервалом проверки в секундах."""
         if self._running:
             return
 
@@ -60,15 +60,16 @@ class UpdateScheduler:
             try:
                 logger.info("updating..........")
                 await self._check_all_links()
-            except Exception as e:
-                logger.exception("Error checking updates: %s", str(e))
+            except Exception:
+                logger.exception("Error checking updates")
 
             await asyncio.sleep(interval)
 
     def _get_all_links(self) -> Dict[str, Set[int]]:
         # Собираем все уникальные ссылки из всех чатов
         all_links: Dict[str, Set[int]] = {}
-        for chat_info in self.storage._chats.values():
+        chats = self.storage.chats
+        for chat_info in chats.values():
             for link in chat_info.links:
                 str_url = str(link.url)
                 if str_url not in all_links:
@@ -106,11 +107,11 @@ class UpdateScheduler:
 
                     self._last_check[url_str] = last_update
 
-            except Exception as e:
-                logger.exception("Error checking URL %s: %s", url_str, str(e))
+            except Exception:
+                logger.exception("Error checking URL %s", url_str)
 
     async def _send_update_notification(self, update: LinkUpdate) -> None:
-        """Отправляет уведомление об обновлении через API бота."""
+        """Отправляет уведомление o6 обновлении через API бота."""
         try:
             bot_api_url = f"{self.bot_base_url}/api/v1/updates"
             logger.debug("before session")
@@ -130,5 +131,5 @@ class UpdateScheduler:
                             len(update.tg_chat_ids),
                         )
 
-        except Exception as e:
-            logger.exception("Error sending update notification: %s", str(e))
+        except Exception:
+            logger.exception("Error sending update notification")

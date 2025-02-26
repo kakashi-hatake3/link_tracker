@@ -1,5 +1,7 @@
+import logging
 from urllib.parse import urlparse
 
+from fastapi import HTTPException
 from telethon import TelegramClient, events
 from telethon.events import NewMessage
 from telethon.tl.functions.bots import SetBotCommandsRequest
@@ -18,6 +20,9 @@ HELP_MESSAGE = """
 """
 
 
+logger = logging.getLogger(__name__)
+
+
 class BotHandler:
     def __init__(self, client: TelegramClient, storage: Storage) -> None:
         self.client = client
@@ -29,10 +34,10 @@ class BotHandler:
     async def create(cls, client: TelegramClient, storage: Storage) -> "BotHandler":
         """Фабричный метод для создания экземпляра BotHandler."""
         handler = cls(client, storage)
-        await handler._register_commands()
+        await handler.register_commands()
         return handler
 
-    async def _register_commands(self) -> None:
+    async def register_commands(self) -> None:
         """Регистрирует команды бота в Telegram."""
         commands = [
             BotCommand(command="start", description="Регистрация пользователя"),
@@ -73,6 +78,11 @@ class BotHandler:
     async def _help_handler(self, event: NewMessage.Event) -> None:
         await event.reply(HELP_MESSAGE)
 
+    def _validate_url(self, url_to_validate: str) -> None:
+        parsed_url = urlparse(url_to_validate)
+        if not all([parsed_url.scheme, parsed_url.netloc]):
+            raise ValueError("Invalid URL")
+
     async def _track_handler(self, event: NewMessage.Event) -> None:
         max_split = 2
         if not event.message.text:
@@ -87,10 +97,7 @@ class BotHandler:
         description = parts[2] if len(parts) > max_split else None
 
         try:
-            parsed_url = urlparse(url)
-            if not all([parsed_url.scheme, parsed_url.netloc]):
-                raise ValueError("Invalid URL")
-
+            self._validate_url(url)
             # Добавляем ссылку через scrapper API
             link_response = await self.scrapper.add_link(event.chat_id, url, description)
             if link_response:
@@ -99,8 +106,13 @@ class BotHandler:
                 await event.reply(
                     "Эта ссылка уже отслеживается или произошла ошибка при добавлении.",
                 )
-        except Exception as e:
-            await event.reply(f"Ошибка при добавлении ссылки: {e!s}")
+        except ValueError as e:
+            await event.reply(f"Некорректный URL: {e}")
+        except HTTPException as e:
+            await event.reply(f"Ошибка API: {e}")
+        except Exception:
+            logger.exception("Unexpected error in track handler")
+            await event.reply("Произошла непредвиденная ошибка при добавлении ссылки")
 
     async def _untrack_handler(self, event: NewMessage.Event) -> None:
         max_split = 2
@@ -120,8 +132,11 @@ class BotHandler:
                 await event.reply(f"Отслеживание ссылки {url} прекращено.")
             else:
                 await event.reply("Указанная ссылка не отслеживается.")
-        except Exception as e:
-            await event.reply(f"Ошибка при удалении ссылки: {e!s}")
+        except HTTPException as e:
+            await event.reply(f"Ошибка API: {e}")
+        except Exception:
+            logger.exception("Unexpected error in untrack handler")
+            await event.reply("Произошла непредвиденная ошибка при удалении ссылки")
 
     async def _list_handler(self, event: NewMessage.Event) -> None:
         try:
@@ -140,8 +155,11 @@ class BotHandler:
                 message += "\n"
 
             await event.reply(message)
-        except Exception as e:
-            await event.reply(f"Ошибка при получении списка ссылок: {e!s}")
+        except HTTPException as e:
+            await event.reply(f"Ошибка API: {e}")
+        except Exception:
+            logger.exception("Unexpected error in list handler")
+            await event.reply("Произошла непредвиденная ошибка при получении списка ссылок")
 
     async def _unknown_command_handler(self, event: NewMessage.Event) -> None:
         if event.message.text and event.message.text.startswith("/"):

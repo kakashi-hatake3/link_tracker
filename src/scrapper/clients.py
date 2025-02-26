@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -95,7 +95,7 @@ class StackOverflowClient(BaseClient):
             if not last_activity_date:
                 return None
 
-            return datetime.fromtimestamp(last_activity_date)
+            return datetime.fromtimestamp(last_activity_date, tz=timezone.utc)
 
 
 class UpdateChecker:

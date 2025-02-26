@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import pytest
@@ -132,7 +132,7 @@ async def test_stackoverflow_get_last_update_success() -> None:
     client = StackOverflowClient(session)
     url: HttpUrl = "https://stackoverflow.com/questions/1234567/title"
     result = await client.get_last_update(url)
-    expected = datetime.fromtimestamp(1677052800)
+    expected = datetime.fromtimestamp(1677052800, tz=timezone.utc)
     assert result == expected
 
 
@@ -170,7 +170,7 @@ async def test_update_checker_stackoverflow() -> None:
     checker = UpdateChecker(session)
     url: HttpUrl = "https://stackoverflow.com/questions/1234567/title"
     result = await checker.check_updates(url)
-    expected = datetime.fromtimestamp(1677052800)
+    expected = datetime.fromtimestamp(1677052800, tz=timezone.utc)
     assert result == expected
 
 

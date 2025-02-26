@@ -7,21 +7,21 @@ from src.scrapper.models import ChatInfo, LinkResponse
 
 class ScrapperStorage:
     def __init__(self) -> None:
-        self._chats: Dict[int, ChatInfo] = {}
+        self.chats: Dict[int, ChatInfo] = {}
         self._next_link_id: int = 1
 
     def add_chat(self, chat_id: int) -> None:
         """Добавить новый чат."""
-        if chat_id not in self._chats:
-            self._chats[chat_id] = ChatInfo(chat_id=chat_id)
+        if chat_id not in self.chats:
+            self.chats[chat_id] = ChatInfo(chat_id=chat_id)
 
     def remove_chat(self, chat_id: int) -> bool:
         """Удалить чат."""
-        return bool(self._chats.pop(chat_id, None))
+        return bool(self.chats.pop(chat_id, None))
 
     def get_chat(self, chat_id: int) -> Optional[ChatInfo]:
-        """Получить информацию о чате."""
-        return self._chats.get(chat_id)
+        """Получить информацию o чате."""
+        return self.chats.get(chat_id)
 
     def add_link(
         self,

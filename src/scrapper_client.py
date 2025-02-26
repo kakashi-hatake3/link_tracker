@@ -13,9 +13,9 @@ class ScrapperClient:
         self.base_url = base_url.rstrip("/")
 
     async def register_chat(self, chat_id: int) -> bool:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.base_url}/tg-chat/{chat_id}") as response:
-                return response.status == HTTP_200_OK
+        async with (aiohttp.ClientSession() as session,
+                    session.post(f"{self.base_url}/tg-chat/{chat_id}") as response):
+            return response.status == HTTP_200_OK
 
     async def add_link(
         self,
@@ -23,7 +23,6 @@ class ScrapperClient:
         url: HttpUrl,
         description: Optional[str] = None,
     ) -> Optional[LinkResponse]:
-        # Преобразуем описание в теги, если оно есть
         tags = [description] if description else []
 
         request = AddLinkRequest(

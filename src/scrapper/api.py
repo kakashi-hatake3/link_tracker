@@ -16,18 +16,31 @@ if TYPE_CHECKING:
 router = APIRouter()
 
 
+def raise_http_exception(description: str, code: str, status_code: int) -> None:
+    raise HTTPException(
+        status_code=status_code,
+        detail=ApiErrorResponse( # type: ignore[call-arg]
+            description=description,
+            code=code,
+        ).model_dump(),
+    )
+
+
 @router.post(
-    "/tg-chat/{id}",
+    "/tg-chat/{chat_id}",
     responses={
         200: {"description": "Чат зарегистрирован"},
         400: {"model": ApiErrorResponse},
     },
 )
-async def register_chat(id: int, request: Request) -> dict[str, str]:
+async def register_chat(chat_id: int, request: Request) -> dict[str, str]:
     try:
         storage: ScrapperStorage = request.app.state.storage
-        storage.add_chat(id)
-        return {"status": "ok"}
+        storage.add_chat(chat_id)
+        if storage.get_chat(chat_id):
+            return {"status": "ok"}
+        else:
+            return {"status": "error"}
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -37,29 +50,23 @@ async def register_chat(id: int, request: Request) -> dict[str, str]:
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e
 
 
 @router.delete(
-    "/tg-chat/{id}",
+    "/tg-chat/{chat_id}",
     responses={
         200: {"description": "Чат успешно удалён"},
         400: {"model": ApiErrorResponse},
         404: {"model": ApiErrorResponse},
     },
 )
-async def remove_chat(id: int, request: Request) -> dict[str, str]:
+async def remove_chat(chat_id: int, request: Request) -> dict[str, str] | None:
     try:
         storage: ScrapperStorage = request.app.state.storage
-        if storage.remove_chat(id):
+        if storage.remove_chat(chat_id):
             return {"status": "ok"}
-        raise HTTPException(
-            status_code=404,
-            detail=ApiErrorResponse(  # type: ignore[call-arg]
-                description="Чат не найден",
-                code="CHAT_NOT_FOUND",
-            ).model_dump(),
-        )
+        raise_http_exception("Чат не найден", "CHAT_NOT_FOUND", 404)
     except HTTPException:
         raise
     except Exception as e:
@@ -71,7 +78,9 @@ async def remove_chat(id: int, request: Request) -> dict[str, str]:
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e
+    else:
+        return None
 
 
 @router.get(
@@ -99,7 +108,7 @@ async def get_links(
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e
 
 
 @router.post(
@@ -114,24 +123,22 @@ async def add_link(
     request: Request,
     link_request: AddLinkRequest,
     tg_chat_id: int = Header(..., alias="Tg-Chat-Id"),
-) -> LinkResponse:
+) -> LinkResponse | None:
     try:
         storage: ScrapperStorage = request.app.state.storage
-        link = storage.add_link(
-            tg_chat_id,
-            link_request.link,
-            link_request.tags,
-            link_request.filters,
-        )
-        if link:
+        def add_link_to_storage() -> LinkResponse | None:
+            link = storage.add_link(
+                tg_chat_id,
+                link_request.link,
+                link_request.tags,
+                link_request.filters,
+            )
+            if not link:
+                raise_http_exception("Ссылка уже отслеживается",
+                                     "LINK_ALREADY_EXISTS", 400)
             return link
-        raise HTTPException(
-            status_code=400,
-            detail=ApiErrorResponse(  # type: ignore[call-arg]
-                description="Ссылка уже отслеживается",
-                code="LINK_ALREADY_EXISTS",
-            ).model_dump(),
-        )
+
+        return add_link_to_storage()
     except HTTPException:
         raise
     except Exception as e:
@@ -143,7 +150,7 @@ async def add_link(
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e
 
 
 @router.delete(
@@ -159,19 +166,17 @@ async def remove_link(
     request: Request,
     link_request: RemoveLinkRequest,
     tg_chat_id: int = Header(..., alias="Tg-Chat-Id"),
-) -> LinkResponse:
+) -> LinkResponse | None:
     try:
         storage: ScrapperStorage = request.app.state.storage
-        link = storage.remove_link(tg_chat_id, link_request.link)
-        if link:
+        def remove_link_from_storage() -> LinkResponse | None:
+            link = storage.remove_link(tg_chat_id, link_request.link)
+            if not link:
+                raise_http_exception("Ссылка не найдена",
+                                     "LINK_NOT_FOUND", 404)
             return link
-        raise HTTPException(
-            status_code=404,
-            detail=ApiErrorResponse(  # type: ignore[call-arg]
-                description="Ссылка не найдена",
-                code="LINK_NOT_FOUND",
-            ).model_dump(),
-        )
+
+        return remove_link_from_storage()
     except HTTPException:
         raise
     except Exception as e:
@@ -183,4 +188,4 @@ async def remove_link(
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e

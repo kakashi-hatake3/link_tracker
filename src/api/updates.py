@@ -12,7 +12,7 @@ router = APIRouter()
         400: {"model": ApiErrorResponse, "description": "Некорректные параметры запроса"},
     },
 )
-async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]:
+async def process_update(update: LinkUpdate, request: Request) -> dict[str, str] | None:
     try:
         app = request.app
         for chat_id in update.tg_chat_ids:
@@ -22,7 +22,11 @@ async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]
                 if update.description:
                     message += f"\nОписание: {update.description}"
                 await app.tg_client.send_message(chat_id, message)
-        return {"status": "ok"}
+                return {"status": "ok"}
+            else:
+                return {"status": "ok"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -32,4 +36,6 @@ async def process_update(update: LinkUpdate, request: Request) -> dict[str, str]
                 exceptionName=e.__class__.__name__,
                 exceptionMessage=str(e),
             ).model_dump(),
-        )
+        ) from e
+    else:
+        return None
