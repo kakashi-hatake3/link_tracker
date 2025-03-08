@@ -14,7 +14,7 @@ from src.settings import TGBotSettings
 logger = logging.getLogger(__name__)
 
 BOT_BASE_URL = "http://localhost:7777"
-settings = TGBotSettings() # type: ignore[call-arg]
+settings = TGBotSettings()  # type: ignore[call-arg]
 
 
 @asynccontextmanager

@@ -12,7 +12,7 @@ from src.scrapper.clients import UpdateChecker
 from src.scrapper.storage import ScrapperStorage
 from src.settings import TGBotSettings
 
-settings = TGBotSettings() # type: ignore[call-arg]
+settings = TGBotSettings()  # type: ignore[call-arg]
 
 if TYPE_CHECKING:
     from datetime import datetime
