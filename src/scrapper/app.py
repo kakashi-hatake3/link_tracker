@@ -9,11 +9,12 @@ from src.scrapper.api import router
 from src.scrapper.clients import UpdateChecker
 from src.scrapper.scheduler import UpdateScheduler
 from src.scrapper.storage import ScrapperStorage
+from src.settings import TGBotSettings
 
 logger = logging.getLogger(__name__)
 
 BOT_BASE_URL = "http://localhost:7777"
-CHECK_INTERVAL = 10
+settings = TGBotSettings() # type: ignore[call-arg]
 
 
 @asynccontextmanager
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             update_checker=app.state.update_checker,
             bot_base_url=BOT_BASE_URL,
         )
-        await scheduler.start(check_interval=CHECK_INTERVAL)
+        await scheduler.start(check_interval=settings.check_interval)
         app.state.scheduler = scheduler
 
         logger.info("Application started with update scheduler (bot URL: %s)", BOT_BASE_URL)

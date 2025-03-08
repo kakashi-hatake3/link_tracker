@@ -10,8 +10,11 @@ from starlette.status import HTTP_200_OK
 from src.models import LinkUpdate
 from src.scrapper.clients import UpdateChecker
 from src.scrapper.storage import ScrapperStorage
+from src.settings import TGBotSettings
 
-CHECK_INTERVAL = 10
+settings = TGBotSettings() # type: ignore[call-arg]
+
+# CHECK_INTERVAL = 10
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -34,7 +37,7 @@ class UpdateScheduler:
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
 
-    async def start(self, check_interval: int = CHECK_INTERVAL) -> None:
+    async def start(self, check_interval: int = settings.check_interval) -> None:
         """Запускает планировщик c указанным интервалом проверки в секундах."""
         if self._running:
             return
