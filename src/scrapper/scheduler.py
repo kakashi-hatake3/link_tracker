@@ -14,8 +14,6 @@ from src.settings import TGBotSettings
 
 settings = TGBotSettings() # type: ignore[call-arg]
 
-# CHECK_INTERVAL = 10
-
 if TYPE_CHECKING:
     from datetime import datetime
 
