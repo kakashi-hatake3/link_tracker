@@ -23,14 +23,14 @@ class ScrapperClient:
         self,
         chat_id: int,
         url: HttpUrl,
-        description: Optional[str] = None,
+        tags: list[str],
+        filters: list[str],
     ) -> Optional[LinkResponse]:
-        tags = [description] if description else []
 
         request = AddLinkRequest(
             link=url,
             tags=tags,
-            filters=[],
+            filters=filters,
         )
 
         async with aiohttp.ClientSession() as session:
