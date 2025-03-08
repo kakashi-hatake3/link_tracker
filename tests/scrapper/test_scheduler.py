@@ -31,7 +31,7 @@ def scheduler(storage, update_checker):
 @pytest.mark.asyncio
 async def test_start_stop_scheduler(scheduler) -> None:
     """Тест запуска и остановки планировщика."""
-    await scheduler.start()
+    await scheduler.start(check_interval=1)
     assert scheduler._running is True
     assert scheduler._task is not None
 

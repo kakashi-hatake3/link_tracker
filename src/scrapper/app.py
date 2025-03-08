@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             update_checker=app.state.update_checker,
             bot_base_url=BOT_BASE_URL,
         )
-        await scheduler.start()
+        await scheduler.start(check_interval=settings.check_interval)
         app.state.scheduler = scheduler
 
         logger.info("Application started with update scheduler (bot URL: %s)", BOT_BASE_URL)
