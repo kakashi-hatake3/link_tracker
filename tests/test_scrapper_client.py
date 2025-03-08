@@ -84,8 +84,8 @@ async def test_add_link_success(monkeypatch) -> None:
     fake_link_response = {
         "id": 1,
         "url": "https://example.com",
-        "tags": ["Test description"],
-        "filters": [],
+        "tags": ["tag1"],
+        "filters": ["filter1"],
     }
 
     async def fake_post(url, **kwargs):
@@ -94,12 +94,12 @@ async def test_add_link_success(monkeypatch) -> None:
     monkeypatch.setattr(aiohttp, "ClientSession", lambda: FakeClientSession(fake_post=fake_post))
 
     client = ScrapperClient(base_url="http://testserver")
-    result = await client.add_link(123, "https://example.com", "Test description")
+    result = await client.add_link(123, "https://example.com", ["tag1"], ["filter1"])
     assert result is not None
     assert result.id == 1
     assert result.url == HttpUrl("https://example.com/")
-    assert result.tags == ["Test description"]
-    assert result.filters == []
+    assert result.tags == ["tag1"]
+    assert result.filters == ["filter1"]
 
 
 @pytest.mark.asyncio
@@ -110,7 +110,7 @@ async def test_add_link_failure(monkeypatch) -> None:
     monkeypatch.setattr(aiohttp, "ClientSession", lambda: FakeClientSession(fake_post=fake_post))
 
     client = ScrapperClient(base_url="http://testserver")
-    result = await client.add_link(123, "https://example.com", "Test description")
+    result = await client.add_link(123, "https://example.com", ["tag1"], ["filter1"])
     assert result is None
 
 

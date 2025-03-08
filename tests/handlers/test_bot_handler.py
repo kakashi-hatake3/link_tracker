@@ -9,9 +9,9 @@ class FakeScrapper:
     async def register_chat(self, chat_id: int) -> bool:
         return True
 
-    async def add_link(self, chat_id: int, url, description=None):
+    async def add_link(self, chat_id: int, url, tags, filters):
         return type(
-            "FakeLinkResponse", (), {"url": url, "tags": [description] if description else []},
+            "FakeLinkResponse", (), {"url": url, "tags": tags, "filters": filters},
         )
 
     async def remove_link(self, chat_id: int, url):
@@ -22,7 +22,9 @@ class FakeScrapper:
     async def get_links(self, chat_id: int):
         if chat_id == 12345:
             FakeLinkResponse = type(
-                "FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]},
+                "FakeLinkResponse", (), {"url": "https://example.com",
+                                         "tags": ["tag1", "tag2"],
+                                         "filters": ["filter1", "filter2"]},
             )
             return [FakeLinkResponse]
         return []
@@ -74,7 +76,7 @@ class FullFakeScrapper:
     async def register_chat(self, chat_id: int) -> bool:
         return self._register_chat_return
 
-    async def add_link(self, chat_id: int, url, description=None):
+    async def add_link(self, chat_id: int, url, tags, filters):
         if self._add_link_exception:
             raise self._add_link_exception
         return self._add_link_return
@@ -90,19 +92,15 @@ class FullFakeScrapper:
         return self._get_links_return
 
 
-# --- Тесты для _start_handler ---
 @pytest.mark.asyncio
 async def test_start_handler_success():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.register_chat возвращает True
     handler.scrapper = FullFakeScrapper(register_chat_return=True)
     fake_event = FakeEvent("/start", chat_id=111)
     await handler._start_handler(fake_event)
-    # Пользователь добавлен
     assert storage.get_user(111) is not None
-    # Ответ содержит приветственное сообщение
     assert any("Добро пожаловать" in reply for reply in fake_event.replies)
 
 
@@ -111,15 +109,12 @@ async def test_start_handler_error():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.register_chat возвращает False
     handler.scrapper = FullFakeScrapper(register_chat_return=False)
     fake_event = FakeEvent("/start", chat_id=112)
     await handler._start_handler(fake_event)
-    # Ответ содержит сообщение об ошибке регистрации
     assert any("Произошла ошибка при регистрации" in reply for reply in fake_event.replies)
 
 
-# --- Тест для _help_handler ---
 @pytest.mark.asyncio
 async def test_help_handler():
     fake_client = FakeClient()
@@ -130,17 +125,18 @@ async def test_help_handler():
     assert fake_event.replies[0] == HELP_MESSAGE
 
 
-# --- Тесты для _track_handler ---
 @pytest.mark.asyncio
 async def test_track_handler_success():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.add_link возвращает не None (например, строку "fake_link")
     handler.scrapper = FullFakeScrapper(add_link_return="fake_link")
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=222)
+    fake_event = FakeEvent("/track https://example.com", chat_id=222)
     await handler._track_handler(fake_event)
-    assert any("добавлена для отслеживания" in reply for reply in fake_event.replies)
+    assert any("Введите тэги (опционально)" in reply for reply in fake_event.replies)
+    fake_event = FakeEvent("tag1 tag2", chat_id=222)
+    await handler._conversation_handler(fake_event)
+    assert any("Настройте фильтры (опционально)" in reply for reply in fake_event.replies)
 
 
 @pytest.mark.asyncio
@@ -162,7 +158,6 @@ async def test_track_handler_invalid_url():
     handler.scrapper = FullFakeScrapper()
     fake_event = FakeEvent("/track not-a-url", chat_id=224)
     await handler._track_handler(fake_event)
-    # Ожидается сообщение об ошибке валидации URL
     assert any("Некорректный URL" in reply for reply in fake_event.replies)
 
 
@@ -171,11 +166,14 @@ async def test_track_handler_scrapper_returns_none():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.add_link возвращает None (например, ссылка уже отслеживается)
     handler.scrapper = FullFakeScrapper(add_link_return=None)
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=225)
+    fake_event = FakeEvent("/track https://example.com", chat_id=225)
     await handler._track_handler(fake_event)
-    assert any("Эта ссылка уже отслеживается" in reply for reply in fake_event.replies)
+    assert any("Введите тэги (опционально)" in reply for reply in fake_event.replies)
+
+    fake_event = FakeEvent("tag1 tag2", chat_id=225)
+    await handler._conversation_handler(fake_event)
+    assert any("Настройте фильтры (опционально)" in reply for reply in fake_event.replies)
 
 
 @pytest.mark.asyncio
@@ -183,32 +181,25 @@ async def test_track_handler_http_exception():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.add_link выбрасывает HTTPException
     handler.scrapper = FullFakeScrapper(add_link_exception=HTTPException(detail="API error", status_code=400))
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=226)
+    fake_event = FakeEvent("/track https://example.com", chat_id=226)
     await handler._track_handler(fake_event)
+    assert any("Введите тэги (опционально)" in reply for reply in fake_event.replies)
+
+    fake_event = FakeEvent("tag1 tag2", chat_id=226)
+    await handler._conversation_handler(fake_event)
+    assert any("Настройте фильтры (опционально)" in reply for reply in fake_event.replies)
+
+    fake_event = FakeEvent("filter1 filter2", chat_id=226)
+    await handler._conversation_handler(fake_event)
     assert any("Ошибка API:" in reply for reply in fake_event.replies)
 
 
-@pytest.mark.asyncio
-async def test_track_handler_generic_exception():
-    fake_client = FakeClient()
-    storage = Storage()
-    handler = BotHandler(fake_client, storage)
-    # scrapper.add_link выбрасывает generic Exception
-    handler.scrapper = FullFakeScrapper(add_link_exception=Exception("Test generic error"))
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=227)
-    await handler._track_handler(fake_event)
-    assert any("Произошла непредвиденная ошибка при добавлении ссылки" in reply for reply in fake_event.replies)
-
-
-# --- Тесты для _untrack_handler ---
 @pytest.mark.asyncio
 async def test_untrack_handler_success():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.remove_link возвращает не None
     handler.scrapper = FullFakeScrapper(remove_link_return="fake_removed")
     fake_event = FakeEvent("/untrack https://example.com", chat_id=444)
     await handler._untrack_handler(fake_event)
@@ -231,7 +222,6 @@ async def test_untrack_handler_not_found():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.remove_link возвращает None
     handler.scrapper = FullFakeScrapper(remove_link_return=None)
     fake_event = FakeEvent("/untrack https://nonexistent.com", chat_id=446)
     await handler._untrack_handler(fake_event)
@@ -243,7 +233,6 @@ async def test_untrack_handler_http_exception():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.remove_link выбрасывает HTTPException
     handler.scrapper = FullFakeScrapper(remove_link_exception=HTTPException(detail="API error", status_code=400))
     fake_event = FakeEvent("/untrack https://example.com", chat_id=447)
     await handler._untrack_handler(fake_event)
@@ -255,20 +244,17 @@ async def test_untrack_handler_generic_exception():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.remove_link выбрасывает generic Exception
     handler.scrapper = FullFakeScrapper(remove_link_exception=Exception("Generic error"))
     fake_event = FakeEvent("/untrack https://example.com", chat_id=448)
     await handler._untrack_handler(fake_event)
     assert any("Произошла непредвиденная ошибка при удалении ссылки" in reply for reply in fake_event.replies)
 
 
-# --- Тесты для _list_handler ---
 @pytest.mark.asyncio
 async def test_list_handler_empty():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.get_links возвращает пустой список
     async def fake_get_links(chat_id: int):
         return []
     handler.scrapper = FullFakeScrapper()
@@ -283,7 +269,6 @@ async def test_list_handler_with_links():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # Для chat_id 12345 возвращаем одну ссылку с тегами
     def fake_get_links(chat_id: int):
         FakeLinkResponse = type("FakeLinkResponse", (), {"url": "https://example.com", "tags": ["tag1", "tag2"]})
         return [FakeLinkResponse]
@@ -301,7 +286,6 @@ async def test_list_handler_http_exception():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.get_links выбрасывает HTTPException
     handler.scrapper = FullFakeScrapper(get_links_exception=HTTPException(detail="API error", status_code=400))
     fake_event = FakeEvent("/list", chat_id=777)
     await handler._list_handler(fake_event)
@@ -313,14 +297,12 @@ async def test_list_handler_generic_exception():
     fake_client = FakeClient()
     storage = Storage()
     handler = BotHandler(fake_client, storage)
-    # scrapper.get_links выбрасывает generic Exception
     handler.scrapper = FullFakeScrapper(get_links_exception=Exception("Generic error"))
     fake_event = FakeEvent("/list", chat_id=778)
     await handler._list_handler(fake_event)
     assert any("Произошла непредвиденная ошибка при получении списка ссылок" in reply for reply in fake_event.replies)
 
 
-# --- Тест для _unknown_command_handler ---
 @pytest.mark.asyncio
 async def test_unknown_command_handler():
     fake_client = FakeClient()
@@ -352,28 +334,6 @@ async def test_help_handler() -> None:
     fake_event = FakeEvent("/help")
     await handler._help_handler(fake_event)
     assert fake_event.replies[0] == HELP_MESSAGE
-
-
-@pytest.mark.asyncio
-async def test_track_handler_success() -> None:
-    fake_client = FakeClient()
-    storage = Storage()
-    handler = BotHandler(fake_client, storage)
-    handler.scrapper = FullFakeScrapper()
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=222)
-    await handler._track_handler(fake_event)
-    assert any("добавлена для отслеживания" in reply for reply in fake_event.replies)
-
-
-@pytest.mark.asyncio
-async def test_track_handler_invalid_url() -> None:
-    fake_client = FakeClient()
-    storage = Storage()
-    handler = BotHandler(fake_client, storage)
-    handler.scrapper = FullFakeScrapper()
-    fake_event = FakeEvent("/track not-a-url", chat_id=333)
-    await handler._track_handler(fake_event)
-    assert any("Некорректный URL" in reply for reply in fake_event.replies)
 
 
 @pytest.mark.asyncio
@@ -449,17 +409,6 @@ async def test_track_handler_missing_url() -> None:
 
 
 @pytest.mark.asyncio
-async def test_track_handler_scrapper_returns_none() -> None:
-    fake_client = FakeClient()
-    storage = Storage()
-    handler = BotHandler(fake_client, storage)
-    handler.scrapper = FullFakeScrapper(add_link_return=None)
-    fake_event = FakeEvent("/track https://example.com Some description", chat_id=222)
-    await handler._track_handler(fake_event)
-    assert any("Эта ссылка уже отслеживается" in reply for reply in fake_event.replies)
-
-
-@pytest.mark.asyncio
 async def test_untrack_handler_missing_url() -> None:
     fake_client = FakeClient()
     storage = Storage()
@@ -492,4 +441,58 @@ async def test_untrack_handler_empty_text() -> None:
     handler.scrapper = FullFakeScrapper()
     fake_event = FakeEvent("", chat_id=555)
     await handler._untrack_handler(fake_event)
-    assert fake_event.replies == []
+    assert fake_event.replies == ["Пожалуйста, укажите URL для прекращения отслеживания."]
+
+
+@pytest.mark.asyncio
+async def test_conversation_handler_generic_exception():
+    fake_client = FakeClient()
+    storage = Storage()
+    handler = BotHandler(fake_client, storage)
+    chat_id = 300
+    handler.conversations[chat_id] = {
+         'url': 'https://example.com',
+         'tags': ['tag1', 'tag2'],
+         'stage': 'await_filters'
+    }
+    handler.scrapper = FullFakeScrapper(add_link_exception=Exception("Test generic error"))
+    fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)
+    await handler._conversation_handler(fake_event)
+    assert any("Произошла непредвиденная ошибка при добавлении ссылки" in reply for reply in fake_event.replies)
+    assert chat_id not in handler.conversations
+
+
+@pytest.mark.asyncio
+async def test_conversation_handler_link_response_none():
+    fake_client = FakeClient()
+    storage = Storage()
+    handler = BotHandler(fake_client, storage)
+    chat_id = 301
+    handler.conversations[chat_id] = {
+         'url': 'https://example.com',
+         'tags': ['tag1', 'tag2'],
+         'stage': 'await_filters'
+    }
+    handler.scrapper = FullFakeScrapper(add_link_return=None)
+    fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)
+    await handler._conversation_handler(fake_event)
+    assert any("Эта ссылка уже отслеживается или произошла ошибка при добавлении" in reply for reply in fake_event.replies)
+    assert chat_id not in handler.conversations
+
+
+@pytest.mark.asyncio
+async def test_conversation_handler_success():
+    fake_client = FakeClient()
+    storage = Storage()
+    handler = BotHandler(fake_client, storage)
+    chat_id = 302
+    handler.conversations[chat_id] = {
+         'url': 'https://example.com',
+         'tags': ['tag1', 'tag2'],
+         'stage': 'await_filters'
+    }
+    handler.scrapper = FullFakeScrapper(add_link_return="fake_link")
+    fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)
+    await handler._conversation_handler(fake_event)
+    assert any("Ссылка https://example.com добавлена для отслеживания" in reply for reply in fake_event.replies)
+    assert chat_id not in handler.conversations
