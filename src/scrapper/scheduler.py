@@ -34,15 +34,20 @@ class UpdateScheduler:
         self._running = False
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
+        try:
+            self.check_interval = settings.check_interval
+        except Exception:
+            self.check_interval = 10
 
-    async def start(self, check_interval: int = settings.check_interval) -> None:
+
+    async def start(self) -> None:
         """Запускает планировщик c указанным интервалом проверки в секундах."""
         if self._running:
             return
 
         self._running = True
-        self._task = asyncio.create_task(self._check_loop(check_interval))
-        logger.info("Update scheduler started with interval %d seconds", check_interval)
+        self._task = asyncio.create_task(self._check_loop(self.check_interval))
+        logger.info("Update scheduler started with interval %d seconds", self.check_interval)
 
     async def stop(self) -> None:
         """Останавливает планировщик."""
