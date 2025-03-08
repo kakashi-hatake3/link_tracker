@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -12,7 +12,7 @@ class LinkUpdate(BaseModel):
     id: int
     url: HttpUrl
     description: Optional[str] = None
-    tg_chat_ids: List[int] = Field(alias="tgChatIds")
+    tg_chat_ids: list[int] = Field(alias="tgChatIds")
 
 
 class ApiErrorResponse(BaseModel):
@@ -20,9 +20,9 @@ class ApiErrorResponse(BaseModel):
     code: str
     exception_name: Optional[str] = Field(None, alias="exceptionName")
     exception_message: Optional[str] = Field(None, alias="exceptionMessage")
-    stacktrace: Optional[List[str]] = None
+    stacktrace: Optional[list[str]] = None
 
 
 class User(BaseModel):
     chat_id: int
-    tracked_links: List[Link] = Field(default_factory=list)
+    tracked_links: list[Link] = Field(default_factory=list)

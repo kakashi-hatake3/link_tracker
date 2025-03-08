@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from pydantic import HttpUrl
 
@@ -27,8 +27,8 @@ class ScrapperStorage:
         self,
         chat_id: int,
         url: HttpUrl,
-        tags: List[str],
-        filters: List[str],
+        tags: list[str],
+        filters: list[str],
     ) -> Optional[LinkResponse]:
         """Добавить ссылку для отслеживания."""
         chat = self.get_chat(chat_id)
@@ -60,7 +60,7 @@ class ScrapperStorage:
                 return chat.links.pop(i)
         return None
 
-    def get_links(self, chat_id: int) -> List[LinkResponse]:
+    def get_links(self, chat_id: int) -> list[LinkResponse]:
         """Получить все отслеживаемые ссылки чата."""
         chat = self.get_chat(chat_id)
         return chat.links if chat else []

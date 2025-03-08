@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from src.models import Link, User
 
@@ -34,6 +34,6 @@ class Storage:
         user.tracked_links = [link for link in user.tracked_links if str(link.url) != url]
         return len(user.tracked_links) < initial_length
 
-    def get_links(self, chat_id: int) -> List[Link]:
+    def get_links(self, chat_id: int) -> list[Link]:
         user = self.get_user(chat_id)
         return user.tracked_links if user else []

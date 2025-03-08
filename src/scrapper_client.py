@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import aiohttp
 from fastapi.encoders import jsonable_encoder
@@ -58,7 +58,7 @@ class ScrapperClient:
                     return LinkResponse.model_validate(await response.json())
                 return None
 
-    async def get_links(self, chat_id: int) -> List[LinkResponse]:
+    async def get_links(self, chat_id: int) -> list[LinkResponse]:
         async with aiohttp.ClientSession() as session:
             headers = {"Tg-Chat-Id": str(chat_id)}
             async with session.get(f"{self.base_url}/links", headers=headers) as response:
