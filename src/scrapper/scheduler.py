@@ -66,22 +66,9 @@ class UpdateScheduler:
 
             await asyncio.sleep(interval)
 
-    def _get_all_links(self) -> Dict[str, Set[int]]:
-        # Собираем все уникальные ссылки из всех чатов
-        all_links: Dict[str, Set[int]] = {}
-        chats = self.storage.chats
-        for chat_info in chats.values():
-            for link in chat_info.links:
-                str_url = str(link.url)
-                if str_url not in all_links:
-                    all_links[str_url] = set()
-                all_links[str_url].add(chat_info.chat_id)
-        logger.info("links: %s", all_links)
-        return all_links
-
     async def _check_all_links(self) -> None:
         """Проверяет обновления для всех отслеживаемых ссылок."""
-        all_links = self._get_all_links()
+        all_links = self.storage.get_all_unique_links_chat_ids()
         # Проверяем каждую ссылку
         for url_str, chat_ids in all_links.items():
             try:
