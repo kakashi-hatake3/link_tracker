@@ -1,67 +1,48 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union, Set
 
+import os
+
+from dotenv import load_dotenv
 from pydantic import HttpUrl
 
-from src.scrapper.models import ChatInfo, LinkResponse
+from src.scrapper.database import SQLStorage, ORMStorage, StorageInterface
+from src.scrapper.models import ChatInfo, LinkResponse, ListLinksResponse
 
 
-class ScrapperStorage:
-    def __init__(self) -> None:
-        self.chats: Dict[int, ChatInfo] = {}
-        self._next_link_id: int = 1
-        # bd?
+load_dotenv()
+
+
+class ScrapperStorage(StorageInterface):
+    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:
+        access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
+        if access_type == "SQL":
+            self.impl: StorageInterface = SQLStorage(db_url)
+        else:
+            self.impl: StorageInterface = ORMStorage(db_url)
 
     def add_chat(self, chat_id: int) -> None:
-        """Добавить новый чат."""
-        if chat_id not in self.chats:
-            self.chats[chat_id] = ChatInfo(chat_id=chat_id)
+        return self.impl.add_chat(chat_id)
 
     def remove_chat(self, chat_id: int) -> bool:
-        """Удалить чат."""
-        return bool(self.chats.pop(chat_id, None))
+        return self.impl.remove_chat(chat_id)
 
     def get_chat(self, chat_id: int) -> Optional[ChatInfo]:
-        """Получить информацию o чате."""
-        return self.chats.get(chat_id)
+        return self.impl.get_chat(chat_id)
 
     def add_link(
         self,
         chat_id: int,
         url: HttpUrl,
         tags: list[str],
-        filters: list[str],
+        filters:list[str],
     ) -> Optional[LinkResponse]:
-        """Добавить ссылку для отслеживания."""
-        chat = self.get_chat(chat_id)
-        if not chat:
-            return None
-
-        # Проверяем, не отслеживается ли уже эта ссылка
-        if any(str(link.url) == str(url) for link in chat.links):
-            return None
-
-        link = LinkResponse(
-            id=self._next_link_id,
-            url=url,
-            tags=tags,
-            filters=filters,
-        )
-        self._next_link_id += 1
-        chat.links.append(link)
-        return link
+        return self.impl.add_link(chat_id, url, tags, filters)
 
     def remove_link(self, chat_id: int, url: HttpUrl) -> Optional[LinkResponse]:
-        """Удалить ссылку из отслеживания."""
-        chat = self.get_chat(chat_id)
-        if not chat:
-            return None
+        return self.impl.remove_link(chat_id, url)
 
-        for i, link in enumerate(chat.links):
-            if str(link.url) == str(url):
-                return chat.links.pop(i)
-        return None
+    def get_links(self, chat_id: int) -> ListLinksResponse:
+        return self.impl.get_links(chat_id)
 
-    def get_links(self, chat_id: int) -> list[LinkResponse]:
-        """Получить все отслеживаемые ссылки чата."""
-        chat = self.get_chat(chat_id)
-        return chat.links if chat else []
+    def get_all_unique_links_chat_ids(self) -> Dict[str, Set[int]]:
+        return self.impl.get_all_unique_links_chat_ids()
