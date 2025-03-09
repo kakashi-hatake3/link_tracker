@@ -9,6 +9,7 @@ class ScrapperStorage:
     def __init__(self) -> None:
         self.chats: Dict[int, ChatInfo] = {}
         self._next_link_id: int = 1
+        # bd?
 
     def add_chat(self, chat_id: int) -> None:
         """Добавить новый чат."""
