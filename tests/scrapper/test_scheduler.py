@@ -8,8 +8,8 @@ from src.scrapper.storage import ScrapperStorage
 
 
 @pytest.fixture
-def storage():
-    storage = ScrapperStorage()
+def storage(postgres_container):
+    storage = ScrapperStorage(postgres_container)
     storage.add_chat(123)
     storage.add_link(123, "https://github.com/test/repo", [], [])
     storage.add_link(123, "https://stackoverflow.com/questions/12345/test", [], [])
