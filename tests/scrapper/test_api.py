@@ -1,19 +1,27 @@
-
 from typing import NoReturn
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from testcontainers.postgres import PostgresContainer
 
 from src.scrapper.api import router
 from src.scrapper.storage import ScrapperStorage
 
 
+@pytest.fixture(scope="function")
+def postgres_container_api() -> str:
+    with PostgresContainer("postgres:14") as postgres:
+        # Получаем URL подключения, заменяем префикс для использования psycopg3 с SQLAlchemy
+        db_url = postgres.get_connection_url(driver="psycopg").replace("postgresql://", "postgresql+psycopg://", 1)
+        yield db_url
+
+
 @pytest.fixture
-def app() -> FastAPI:
+def app(postgres_container_api) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.state.storage = ScrapperStorage()
+    app.state.storage = ScrapperStorage(postgres_container_api)
     return app
 
 
