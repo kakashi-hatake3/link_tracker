@@ -15,10 +15,11 @@ load_dotenv()
 class ScrapperStorage(StorageInterface):
     def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:
         access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
+        self.impl: StorageInterface
         if access_type == "SQL":
-            self.impl: StorageInterface = SQLStorage(db_url)
+            self.impl = SQLStorage(db_url)
         else:
-            self.impl: StorageInterface = ORMStorage(db_url)
+            self.impl = ORMStorage(db_url)
 
     def add_chat(self, chat_id: int) -> None:
         return self.impl.add_chat(chat_id)
