@@ -1,14 +1,11 @@
 import asyncio
 import contextlib
 import logging
-from typing import TYPE_CHECKING, Dict, Set
-
-import aiohttp
-from fastapi.encoders import jsonable_encoder
-from starlette.status import HTTP_200_OK
+from typing import TYPE_CHECKING, Dict
 
 from src.models import LinkUpdate
 from src.scrapper.clients import UpdateChecker
+from src.scrapper.sender import NotificationSender
 from src.scrapper.storage import ScrapperStorage
 from src.settings import TGBotSettings
 
@@ -34,6 +31,7 @@ class UpdateScheduler:
         self._running = False
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
+        self._sender = NotificationSender(bot_base_url)
 
     async def start(self, check_interval: int = settings.check_interval) -> None:
         """Запускает планировщик c указанным интервалом проверки в секундах."""
@@ -91,33 +89,9 @@ class UpdateScheduler:
                         self._next_update_id += 1
 
                         # Отправляем уведомление через API
-                        await self._send_update_notification(update)
+                        await self._sender.send_update_notification(update)
 
                     self._last_check[url_str] = last_update
 
             except Exception:
                 logger.exception("Error checking URL %s", url_str)
-
-    async def _send_update_notification(self, update: LinkUpdate) -> None:
-        """Отправляет уведомление o6 обновлении через API бота."""
-        try:
-            bot_api_url = f"{self.bot_base_url}/api/v1/updates"
-            logger.debug("before session")
-            json_data = jsonable_encoder(update)
-            logger.debug("after dump: %s", json_data)
-            async with aiohttp.ClientSession() as session:
-                logger.debug("getting session")
-                async with session.post(bot_api_url, json=json_data) as response:
-                    logger.debug("sending request: %d", response.status)
-                    if response.status != HTTP_200_OK:
-                        error_data = await response.json()
-                        logger.error("Failed to send update notification: %s", error_data)
-                    else:
-                        logger.info(
-                            "Successfully sent update notification for URL %s to %d chats",
-                            update.url,
-                            len(update.tg_chat_ids),
-                        )
-
-        except Exception:
-            logger.exception("Error sending update notification")
