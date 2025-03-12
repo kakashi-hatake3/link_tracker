@@ -5,7 +5,7 @@ import os
 
 from dotenv import load_dotenv
 from pydantic import HttpUrl
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, func
 from sqlalchemy.orm import sessionmaker
 
 from src.scrapper.database import Base, Chat, Link, Tag, Filter
@@ -163,15 +163,9 @@ class ORMStorage(StorageInterface):
     def get_all_unique_links_chat_ids(self) -> Dict[str, Set[int]]:
         session = self.Session()
         try:
-            result: Dict[str, Set[int]] = {}
-            # Получаем все ссылки и соответствующие chat_id
-            links = session.query(Link.url, Link.chat_id).all()
-            # Группируем chat_id по url
-            for url, chat_id in links:
-                if url not in result:
-                    result[url] = set()
-                result[url].add(chat_id)
-            return result
+            query = session.query(Link.url, func.array_agg(Link.chat_id)).group_by(Link.url)
+            for url, chat_ids in query:
+                yield url, set(chat_ids)
         finally:
             session.close()
 
@@ -368,17 +362,14 @@ class SQLStorage(StorageInterface):
         return ListLinksResponse(links=links_list, size=len(links_list))
 
     def get_all_unique_links_chat_ids(self) -> Dict[str, Set[int]]:
-        query = text("SELECT url, chat_id FROM links")
-        result: Dict[str, Set[int]] = {}
+        query = text("SELECT url, array_agg(chat_id) AS chat_ids FROM links GROUP BY url")
         with self.engine.connect() as conn:
-            rows = conn.execute(query).fetchall()
-            # Группируем chat_id по url
-            for row in rows:
-                url, chat_id = row.url, row.chat_id
-                if url not in result:
-                    result[url] = set()
-                result[url].add(chat_id)
-        return result
+            # Выполняем запрос и итерируемся по результатам
+            result = conn.execute(query)
+            for row in result:
+                url = row[0]
+                chat_ids = set(row[1])
+                yield url, chat_ids
 
 
 class ScrapperStorage(StorageInterface):

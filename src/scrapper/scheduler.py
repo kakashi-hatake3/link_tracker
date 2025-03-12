@@ -66,9 +66,8 @@ class UpdateScheduler:
 
     async def _check_all_links(self) -> None:
         """Проверяет обновления для всех отслеживаемых ссылок."""
-        all_links = self.storage.get_all_unique_links_chat_ids()
         # Проверяем каждую ссылку
-        for url_str, chat_ids in all_links.items():
+        for url_str, chat_ids in self.storage.get_all_unique_links_chat_ids():
             try:
                 last_update = await self.update_checker.check_updates(url_str)  # type: ignore[arg-type]
                 logger.info("last update: %s", last_update)
