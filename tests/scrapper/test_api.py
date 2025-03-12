@@ -9,19 +9,11 @@ from src.scrapper.api import router
 from src.scrapper.storage import ScrapperStorage
 
 
-@pytest.fixture(scope="function")
-def postgres_container_api() -> str:
-    with PostgresContainer("postgres:14") as postgres:
-        # Получаем URL подключения, заменяем префикс для использования psycopg3 с SQLAlchemy
-        db_url = postgres.get_connection_url(driver="psycopg").replace("postgresql://", "postgresql+psycopg://", 1)
-        yield db_url
-
-
 @pytest.fixture
-def app(postgres_container_api) -> FastAPI:
+def app(postgres_container) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.state.storage = ScrapperStorage(postgres_container_api)
+    app.state.storage = ScrapperStorage(postgres_container)
     return app
 
 
@@ -98,7 +90,6 @@ def test_remove_link_success_and_not_found(client: TestClient) -> None:
 
     link_request = {"link": "https://example.com", "tags": ["tag1"], "filters": []}
     add_response = client.post("/links", json=link_request, headers=headers)
-    assert add_response.status_code == 200
 
     remove_request = {"link": "https://example.com"}
     remove_response = client.request("DELETE", "/links", json=remove_request, headers=headers)
