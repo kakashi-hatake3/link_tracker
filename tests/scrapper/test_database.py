@@ -145,11 +145,19 @@ def test_get_all_unique_links_chat_ids(storage: StorageInterface):
     storage.add_link(3, "https://example.net", ["tag3"], ["filter3"])
     storage.add_link(3, "https://example.info", ["tag3"], ["filter3"])
 
-    result: Dict[str, Set[int]] = storage.get_all_unique_links_chat_ids()
-    expected = {
-        "https://example.com/": {1, 2},
-        "https://example.org/": {1, 3},
-        "https://example.net": {2, 3},
-        "https://example.info": {3},
-    }
-    assert result == expected
+    expected = [
+        ("https://example.com/", {1, 2}),
+        ("https://example.org/", {1, 3}),
+        ("https://example.net", {2, 3}),
+        ("https://example.info", {3}),
+    ]
+
+    for ind, (url, chat_ids) in enumerate(storage.get_all_unique_links_chat_ids()):
+        assert url, chat_ids == expected[ind]
+    # expected = {
+    #     "https://example.com/": {1, 2},
+    #     "https://example.org/": {1, 3},
+    #     "https://example.net": {2, 3},
+    #     "https://example.info": {3},
+    # }
+    # assert result == expected
