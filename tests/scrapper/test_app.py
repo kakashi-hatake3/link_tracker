@@ -39,7 +39,7 @@ def disable_update_notification(monkeypatch) -> None:
         return
 
     monkeypatch.setattr(
-        "src.scrapper.scheduler.UpdateScheduler._send_update_notification",
+        "src.scrapper.sender.NotificationSender.send_update_notification",
         fake_send_update_notification,
     )
 
