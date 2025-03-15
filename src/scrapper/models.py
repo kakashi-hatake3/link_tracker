@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -36,3 +37,12 @@ class ListLinksResponse(BaseModel):
 class ChatInfo(BaseModel):
     chat_id: int
     links: list[LinkResponse] = Field(default_factory=list)
+
+
+class UpdateDetail(BaseModel):
+    platform: str
+    update_type: str
+    title: str
+    username: str
+    created_at: datetime
+    preview: str
