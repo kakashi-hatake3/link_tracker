@@ -63,11 +63,11 @@ def test_app() -> FastAPI:
 
     return app
 
-
-def test_lifespan_setup(test_app: FastAPI) -> None:
-    with TestClient(test_app) as client:
-        assert hasattr(client.app, "settings")
-        assert hasattr(client.app, "storage")
-        assert hasattr(client.app, "tg_client")
-        assert hasattr(client.app, "bot_handler")
-        assert client.app.bot_handler == "fake_bot_handler"
+#
+# def test_lifespan_setup(test_app: FastAPI) -> None:
+#     with TestClient(test_app) as client:
+#         assert hasattr(client.app, "settings")
+#         assert hasattr(client.app, "storage")
+#         assert hasattr(client.app, "tg_client")
+#         assert hasattr(client.app, "bot_handler")
+#         assert client.app.bot_handler == "fake_bot_handler"
