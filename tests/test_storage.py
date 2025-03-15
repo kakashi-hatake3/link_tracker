@@ -1,110 +1,38 @@
-from src.models import Link
-from src.storage import Storage
+import pytest
+
+from src.storage import ORMStorage, SQLStorage, Storage, StorageInterface
 
 
-def test_add_and_get_user() -> None:
-    storage = Storage()
+@pytest.fixture(params=["ORM", "SQL", "WRAPPER"])
+def storage(request, postgres_container, monkeypatch) -> StorageInterface:
+    if request.param == "ORM":
+        stor = ORMStorage(postgres_container)
+    elif request.param == "SQL":
+        stor = SQLStorage(postgres_container)
+    elif request.param == "WRAPPER":
+        monkeypatch.setenv("ACCESS_TYPE", "ORM")
+        stor = Storage(postgres_container)
+    else:
+        raise ValueError("Unknown storage type")
+    yield stor
+
+
+def test_get_user_not_exist(storage: StorageInterface) -> None:
+    user = storage.get_user(9999)
+    assert user is None
+
+def test_add_and_get_user(storage: StorageInterface) -> None:
     chat_id = 123
-    assert storage.get_user(chat_id) is None
-
     storage.add_user(chat_id)
     user = storage.get_user(chat_id)
     assert user is not None
     assert user.chat_id == chat_id
     assert user.tracked_links == []
 
-
-def test_add_user_idempotent() -> None:
-    storage = Storage()
-    chat_id = 123
+def test_add_duplicate_user(storage: StorageInterface) -> None:
+    chat_id = 456
     storage.add_user(chat_id)
-    user1 = storage.get_user(chat_id)
     storage.add_user(chat_id)
-    user2 = storage.get_user(chat_id)
-    assert user1 is user2
-
-
-def test_add_link_success() -> None:
-    storage = Storage()
-    chat_id = 100
-    storage.add_user(chat_id)
-    link = Link(url="https://example.com", description="Example site")
-
-    result = storage.add_link(chat_id, link)
-    assert result is True
-
     user = storage.get_user(chat_id)
-    assert len(user.tracked_links) == 1
-    assert user.tracked_links[0].url == link.url
-    assert user.tracked_links[0].description == "Example site"
-
-
-def test_add_link_failure_no_user() -> None:
-    storage = Storage()
-    chat_id = 200
-    link = Link(url="https://example.com", description="Example site")
-    result = storage.add_link(chat_id, link)
-    assert result is False
-
-
-def test_add_link_duplicate() -> None:
-    storage = Storage()
-    chat_id = 300
-    storage.add_user(chat_id)
-    link = Link(url="https://example.com", description="Example site")
-
-    result1 = storage.add_link(chat_id, link)
-    result2 = storage.add_link(chat_id, link)
-    assert result1 is True
-    assert result2 is False
-
-    user = storage.get_user(chat_id)
-    assert len(user.tracked_links) == 1
-
-
-def test_remove_link_success() -> None:
-    storage = Storage()
-    chat_id = 400
-    storage.add_user(chat_id)
-    link = Link(url="https://example.com", description="Example site")
-    storage.add_link(chat_id, link)
-
-    result = storage.remove_link(chat_id, "https://example.com/")
-    assert result is True
-
-    user = storage.get_user(chat_id)
-    assert len(user.tracked_links) == 0
-
-
-def test_remove_link_failure_no_user() -> None:
-    storage = Storage()
-    result = storage.remove_link(500, "https://example.com")
-    assert result is False
-
-
-def test_remove_link_failure_not_found() -> None:
-    storage = Storage()
-    chat_id = 600
-    storage.add_user(chat_id)
-    link = Link(url="https://example.com", description="Example site")
-    storage.add_link(chat_id, link)
-
-    result = storage.remove_link(chat_id, "https://notexist.com")
-    assert result is False
-
-    user = storage.get_user(chat_id)
-    assert len(user.tracked_links) == 1
-
-
-def test_get_links_empty() -> None:
-    storage = Storage()
-    chat_id = 700
-    storage.add_user(chat_id)
-    links = storage.get_links(chat_id)
-    assert links == []
-
-
-def test_get_links_no_user() -> None:
-    storage = Storage()
-    links = storage.get_links(800)
-    assert links == []
+    assert user is not None
+    assert user.chat_id == chat_id

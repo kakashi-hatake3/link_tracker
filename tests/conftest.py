@@ -26,7 +26,6 @@ def mock_event() -> Mock:
 @pytest.fixture(scope="module")
 def postgres_container() -> str:
     with PostgresContainer("postgres:14") as postgres:
-        # Получаем URL подключения, заменяем префикс для использования psycopg3 с SQLAlchemy
         db_url = postgres.get_connection_url(driver="psycopg").replace("postgresql://", "postgresql+psycopg://", 1)
         yield db_url
 
