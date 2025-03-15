@@ -12,41 +12,6 @@ from src.models import Link, User
 
 load_dotenv()
 
-# class Storage:
-#     def __init__(self) -> None:
-#         self._users: Dict[int, User] = {}
-#
-#     def add_user(self, chat_id: int) -> None:
-#         if chat_id not in self._users:
-#             self._users[chat_id] = User(chat_id=chat_id)
-#
-#     def get_user(self, chat_id: int) -> Optional[User]:
-#         return self._users.get(chat_id)
-#
-#     def add_link(self, chat_id: int, link: Link) -> bool:
-#         user = self.get_user(chat_id)
-#         if not user:
-#             return False
-#
-#         if any(existing.url == link.url for existing in user.tracked_links):
-#             return False
-#
-#         user.tracked_links.append(link)
-#         return True
-#
-#     def remove_link(self, chat_id: int, url: str) -> bool:
-#         user = self.get_user(chat_id)
-#         if not user:
-#             return False
-#
-#         initial_length = len(user.tracked_links)
-#         user.tracked_links = [link for link in user.tracked_links if str(link.url) != url]
-#         return len(user.tracked_links) < initial_length
-#
-#     def get_links(self, chat_id: int) -> list[Link]:
-#         user = self.get_user(chat_id)
-#         return user.tracked_links if user else []
-
 
 class StorageInterface(ABC):
     @abstractmethod
@@ -81,7 +46,7 @@ class ORMStorage(StorageInterface):
         try:
             user = session.get(Chat, chat_id)
             if user:
-                links = [Link(url=link.url, description=link.description)
+                links = [Link(url=link.url)
                          for link in user.links]
                 return User(chat_id=user.chat_id, tracked_links=links)
             return None
@@ -111,12 +76,12 @@ class SQLStorage(StorageInterface):
                 links_result = []  # type: ignore[var-annotated]
                 try:
                     links_result = conn.execute(
-                        text("SELECT url, description FROM links WHERE chat_id = :chat_id"),
+                        text("SELECT url FROM links WHERE chat_id = :chat_id"),
                         {"chat_id": chat_id}
                     ).fetchall()
                 except Exception:
                     pass
-                links = [Link(url=row.url, description=row.description) for row in links_result]
+                links = [Link(url=row.url) for row in links_result]
                 return User(chat_id=user_row.chat_id, tracked_links=links)
             return None
 

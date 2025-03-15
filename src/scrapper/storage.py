@@ -8,10 +8,9 @@ from pydantic import HttpUrl
 from sqlalchemy import create_engine, text, func
 from sqlalchemy.orm import sessionmaker
 
-from src.scrapper.database import Link, Tag, Filter
 from src.scrapper.models import ChatInfo, LinkResponse, ListLinksResponse
 from src.utils import chat_to_schema, link_to_schema
-from src.database import Base, Chat
+from src.database import Base, Chat, Link, Tag, Filter
 
 load_dotenv()
 
