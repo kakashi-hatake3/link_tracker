@@ -1,18 +1,16 @@
 import asyncio
 import contextlib
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import Dict
+import datetime
 
 from src.models import LinkUpdate
-from src.scrapper.clients import UpdateChecker
+from src.scrapper.update_checker import UpdateChecker
 from src.scrapper.sender import NotificationSender
 from src.scrapper.storage import ScrapperStorage
 from src.settings import TGBotSettings
 
 settings = TGBotSettings()  # type: ignore[call-arg]
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +22,10 @@ class UpdateScheduler:
         update_checker: UpdateChecker,
         bot_base_url: str = "http://localhost:7777",
     ) -> None:
-        self.storage = storage
+        self.storage = storage  # type: ignore
         self.update_checker = update_checker
         self.bot_base_url = bot_base_url.rstrip("/")
-        self._last_check: Dict[str, datetime] = {}
+        self._last_check: Dict[str, "datetime"] = {}
         self._running = False
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
@@ -65,32 +63,31 @@ class UpdateScheduler:
             await asyncio.sleep(interval)
 
     async def _check_all_links(self) -> None:
-        """Проверяет обновления для всех отслеживаемых ссылок."""
-        # Проверяем каждую ссылку
         for url_str, chat_ids in self.storage.get_all_unique_links_chat_ids():
             try:
-                last_update = await self.update_checker.check_updates(url_str)  # type: ignore[arg-type]
-                logger.info("last update: %s", last_update)
-                if not last_update:
-                    continue
-
-                # Если это первая проверка или есть обновление
-                if url_str not in self._last_check or last_update > self._last_check[url_str]:
-                    # Если это не первая проверка, значит есть реальное обновление
-                    if url_str in self._last_check:
-                        logger.info("Found update for URL: %s", url_str)
-                        # Создаем объект обновления
-                        update = LinkUpdate(
-                            id=self._next_update_id,
-                            url=url_str,  # type: ignore[arg-type]
+                last_check = self._last_check.get(url_str)
+                new_updates = await self.update_checker.get_new_updates(url_str, last_check)
+                if new_updates:
+                    for upd in new_updates:
+                        message = (
+                            f"Платформа: {upd.platform}\n"
+                            f"Тип: {upd.update_type}\n"
+                            f"Заголовок: {upd.title}\n"
+                            f"Пользователь: {upd.username}\n"
+                            f"Время создания: {upd.created_at.isoformat()}\n"
+                            f"Превью: {upd.preview}"
+                        )
+                        update_obj = LinkUpdate(
+                            id=self._next_update_id,  # type: ignore
+                            url=url_str,
                             tgChatIds=list(chat_ids),
+                            description=message,
                         )
                         self._next_update_id += 1
-
-                        # Отправляем уведомление через API
-                        await self._sender.send_update_notification(update)
-
-                    self._last_check[url_str] = last_update
-
+                        await self._sender.send_update_notification(update_obj)
+                    latest_time = max(upd.created_at for upd in new_updates)
+                    self._last_check[url_str] = latest_time
+                else:
+                    self._last_check[url_str] = datetime.datetime.now(datetime.UTC)
             except Exception:
-                logger.exception("Error checking URL %s", url_str)
+                logger.exception("Ошибка проверки URL %s", url_str)
