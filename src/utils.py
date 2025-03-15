@@ -1,5 +1,6 @@
-from src.scrapper.database import Chat, Link
+from src.scrapper.database import Link
 from src.scrapper.models import LinkResponse, ChatInfo
+from src.database import Chat
 
 
 def link_to_schema(link: Link) -> LinkResponse:

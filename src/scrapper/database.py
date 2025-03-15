@@ -1,12 +1,8 @@
-from typing import Type
-
 from sqlalchemy import (
     Column, Integer, String, ForeignKey, Table
 )
-from sqlalchemy.orm import declarative_base, relationship, DeclarativeBase
-
-
-Base: Type[DeclarativeBase] = declarative_base()
+from sqlalchemy.orm import relationship
+from src.database import Base
 
 
 link_tags = Table(
@@ -23,10 +19,6 @@ link_filters = Table(
     Column("filter_id", Integer, ForeignKey("filters.id"), primary_key=True),
 )
 
-class Chat(Base):
-    __tablename__ = "chats"
-    chat_id = Column(Integer, primary_key=True, index=True)
-    links = relationship("Link", back_populates="chat", cascade="all, delete-orphan")
 
 class Link(Base):
     __tablename__ = "links"
