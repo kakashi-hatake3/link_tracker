@@ -8,9 +8,10 @@ from pydantic import HttpUrl
 from sqlalchemy import create_engine, text, func
 from sqlalchemy.orm import sessionmaker
 
-from src.scrapper.database import Base, Chat, Link, Tag, Filter
+from src.scrapper.database import Link, Tag, Filter
 from src.scrapper.models import ChatInfo, LinkResponse, ListLinksResponse
 from src.utils import chat_to_schema, link_to_schema
+from src.database import Base, Chat
 
 load_dotenv()
 
@@ -109,7 +110,6 @@ class ORMStorage(StorageInterface):
             if not chat:
                 return None
 
-            # Проверяем, не добавлена ли уже ссылка
             existing = session.query(Link).filter(
                 Link.chat_id == chat_id, Link.url == str(url)
             ).first()
@@ -117,13 +117,11 @@ class ORMStorage(StorageInterface):
                 return None
 
             link = Link(chat_id=chat_id, url=str(url))
-            # Обработка тегов
             for tag_name in tags:
                 tag = session.query(Tag).filter_by(name=tag_name).first()
                 if not tag:
                     tag = Tag(name=tag_name)
                 link.tags.append(tag)
-            # Обработка фильтров
             for filter_name in filters:
                 flt = session.query(Filter).filter_by(name=filter_name).first()
                 if not flt:
@@ -195,7 +193,6 @@ class SQLStorage(StorageInterface):
             result = conn.execute(query, {"chat_id": chat_id})
             row = result.fetchone()
             if row:
-                # Получаем ссылки через get_links
                 links_resp = self.get_links(chat_id)
                 return ChatInfo(chat_id=chat_id, links=links_resp.links)
             return None
@@ -207,7 +204,6 @@ class SQLStorage(StorageInterface):
         tags: list[str],
         filters: list[str],
     ) -> Optional[LinkResponse]:
-        # Проверяем существование чата
         if not self.get_chat(chat_id):
             return None
 
@@ -225,7 +221,6 @@ class SQLStorage(StorageInterface):
                 return None
             link_id = link_row.id
 
-            # Обработка тегов
             for tag in tags:
                 upsert_tag = text(
                     """
@@ -241,7 +236,6 @@ class SQLStorage(StorageInterface):
                 )
                 conn.execute(link_tag, {"link_id": link_id, "tag_id": tag_id})
 
-            # Обработка фильтров
             for flt in filters:
                 upsert_filter = text(
                     """
@@ -259,8 +253,6 @@ class SQLStorage(StorageInterface):
 
             conn.commit()
 
-            # Собираем данные для LinkResponse
-            # Получаем теги
             select_tags = text(
                 """
                 SELECT t.name FROM tags t
@@ -269,7 +261,6 @@ class SQLStorage(StorageInterface):
                 """
             )
             tag_names = [r.name for r in conn.execute(select_tags, {"link_id": link_id})]
-            # Получаем фильтры
             select_filters = text(
                 """
                 SELECT f.name FROM filters f
@@ -294,7 +285,6 @@ class SQLStorage(StorageInterface):
                 return None
             link_id = row.id
 
-            # Получаем теги
             select_tags = text(
                 """
                 SELECT t.name FROM tags t
@@ -303,7 +293,6 @@ class SQLStorage(StorageInterface):
                 """
             )
             tag_names = [r.name for r in conn.execute(select_tags, {"link_id": link_id})]
-            # Получаем фильтры
             select_filters = text(
                 """
                 SELECT f.name FROM filters f
@@ -313,7 +302,6 @@ class SQLStorage(StorageInterface):
             )
             filter_names = [r.name for r in conn.execute(select_filters, {"link_id": link_id})]
 
-            # Удаляем связи и ссылку
             conn.execute(text("DELETE FROM link_tags WHERE link_id = :link_id"), {"link_id": link_id})
             conn.execute(text("DELETE FROM link_filters WHERE link_id = :link_id"), {"link_id": link_id})
             delete_link = text("DELETE FROM links WHERE id = :link_id RETURNING id, url")
@@ -364,7 +352,6 @@ class SQLStorage(StorageInterface):
     def get_all_unique_links_chat_ids(self) -> Dict[str, Set[int]]:
         query = text("SELECT url, array_agg(chat_id) AS chat_ids FROM links GROUP BY url")
         with self.engine.connect() as conn:
-            # Выполняем запрос и итерируемся по результатам
             result = conn.execute(query)
             for row in result:
                 url = row[0]
