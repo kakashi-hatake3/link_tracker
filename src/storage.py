@@ -48,7 +48,7 @@ class ORMStorage(StorageInterface):
             if user:
                 links = [Link(url=link.url)
                          for link in user.links]
-                return User(chat_id=user.chat_id, tracked_links=links)
+                return User(chat_id=int(user.chat_id), tracked_links=links)
             return None
         finally:
             session.close()
@@ -75,7 +75,7 @@ class SQLStorage(StorageInterface):
             if user_row:
                 links_result = []  # type: ignore[var-annotated]
                 try:
-                    links_result = conn.execute(
+                    links_result = conn.execute(  # type: ignore[assignment]
                         text("SELECT url FROM links WHERE chat_id = :chat_id"),
                         {"chat_id": chat_id}
                     ).fetchall()
@@ -87,7 +87,7 @@ class SQLStorage(StorageInterface):
 
 
 class Storage(StorageInterface):
-    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:
+    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None: # type: ignore[assignment]
         access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
         self.impl: StorageInterface
         if access_type == "SQL":

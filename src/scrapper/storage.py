@@ -229,7 +229,7 @@ class SQLStorage(StorageInterface):
                     """
                 )
                 tag_result = conn.execute(upsert_tag, {"name": tag})
-                tag_id = tag_result.fetchone().id
+                tag_id = tag_result.fetchone().id # type: ignore[union-attr]
                 link_tag = text(
                     "INSERT INTO link_tags (link_id, tag_id) VALUES (:link_id, :tag_id) ON CONFLICT DO NOTHING"
                 )
@@ -244,7 +244,7 @@ class SQLStorage(StorageInterface):
                     """
                 )
                 filter_result = conn.execute(upsert_filter, {"name": flt})
-                filter_id = filter_result.fetchone().id
+                filter_id = filter_result.fetchone().id # type: ignore[union-attr]
                 link_filter = text(
                     "INSERT INTO link_filters (link_id, filter_id) VALUES (:link_id, :filter_id) ON CONFLICT DO NOTHING"
                 )
@@ -271,7 +271,7 @@ class SQLStorage(StorageInterface):
 
             return LinkResponse(
                 id=link_id,
-                url=str(url),
+                url=HttpUrl(str(url)),
                 tags=tag_names,
                 filters=filter_names,
             )
@@ -359,7 +359,7 @@ class SQLStorage(StorageInterface):
 
 
 class ScrapperStorage(StorageInterface):
-    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:
+    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None: # type: ignore[arg-type, assignment]
         access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
         self.impl: StorageInterface
         if access_type == "SQL":

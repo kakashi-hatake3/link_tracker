@@ -4,6 +4,8 @@ import logging
 from typing import Dict
 import datetime
 
+from pydantic import HttpUrl
+
 from src.models import LinkUpdate
 from src.scrapper.update_checker import UpdateChecker
 from src.scrapper.sender import NotificationSender
@@ -25,7 +27,7 @@ class UpdateScheduler:
         self.storage = storage  # type: ignore
         self.update_checker = update_checker
         self.bot_base_url = bot_base_url.rstrip("/")
-        self._last_check: Dict[str, "datetime"] = {}
+        self._last_check: Dict[str, datetime.datetime] = {}
         self._running = False
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
@@ -66,7 +68,7 @@ class UpdateScheduler:
         for url_str, chat_ids in self.storage.get_all_unique_links_chat_ids():
             try:
                 last_check = self._last_check.get(url_str)
-                new_updates = await self.update_checker.get_new_updates(url_str, last_check)
+                new_updates = await self.update_checker.get_new_updates(HttpUrl(url_str), last_check)
                 if new_updates:
                     for upd in new_updates:
                         message = (
@@ -79,7 +81,7 @@ class UpdateScheduler:
                         )
                         update_obj = LinkUpdate(
                             id=self._next_update_id,  # type: ignore
-                            url=url_str,
+                            url=HttpUrl(url_str),
                             tgChatIds=list(chat_ids),
                             description=message,
                         )
