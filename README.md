@@ -1,6 +1,10 @@
 # Конфигурация проекта
 
 ### Создайте .env файл в корне проекта 
+Его структура находится в .env.example
+
+### Тесты
+Не забудьте запустить docker engine на компе, он нужен для testcontainers
 
 ### Запуск scrapper:
 ` poetry run python -m src.scrapper.app `
