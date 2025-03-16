@@ -1,7 +1,7 @@
 from pydantic import HttpUrl
 
-from src.scrapper.models import LinkResponse, ChatInfo
 from src.database import Chat, Link
+from src.scrapper.models import ChatInfo, LinkResponse
 
 
 def link_to_schema(link: Link) -> LinkResponse:
@@ -11,6 +11,7 @@ def link_to_schema(link: Link) -> LinkResponse:
         tags=[tag.name for tag in link.tags],
         filters=[flt.name for flt in link.filters],
     )
+
 
 def chat_to_schema(chat: Chat) -> ChatInfo:
     return ChatInfo(

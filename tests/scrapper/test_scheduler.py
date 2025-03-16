@@ -5,16 +5,16 @@ import pytest
 
 from src.scrapper.scheduler import UpdateScheduler
 
+
 class FakeStorage:
-    def __init__(self):
+    def __init__(self) -> None:
         self._links = {
             "https://github.com/test/repo": {123},
             "https://stackoverflow.com/questions/12345/test": {456},
         }
 
     def get_all_unique_links_chat_ids(self):
-        for url, chat_ids in self._links.items():
-            yield url, chat_ids
+        yield from self._links.items()
 
 @pytest.fixture
 def storage():
@@ -31,7 +31,7 @@ def scheduler(storage, update_checker):
     return UpdateScheduler(storage, update_checker, "http://test.com")
 
 @pytest.mark.asyncio
-async def test_start_stop_scheduler(scheduler):
+async def test_start_stop_scheduler(scheduler) -> None:
     await scheduler.start(check_interval=1)
     assert scheduler._running is True
     assert scheduler._task is not None
@@ -41,7 +41,7 @@ async def test_start_stop_scheduler(scheduler):
     assert scheduler._task.cancelled()
 
 @pytest.mark.asyncio
-async def test_check_updates_with_new_updates(scheduler, update_checker):
+async def test_check_updates_with_new_updates(scheduler, update_checker) -> None:
     update_detail1 = MagicMock()
     update_detail1.platform = "GitHub"
     update_detail1.update_type = "PR"
@@ -70,7 +70,7 @@ async def test_check_updates_with_new_updates(scheduler, update_checker):
         assert scheduler._last_check["https://github.com/test/repo"] == expected_last_check
 
 @pytest.mark.asyncio
-async def test_no_notification_on_first_check(scheduler, update_checker):
+async def test_no_notification_on_first_check(scheduler, update_checker) -> None:
     update_detail = MagicMock()
     update_detail.platform = "GitHub"
     update_detail.update_type = "PR"
@@ -84,12 +84,12 @@ async def test_no_notification_on_first_check(scheduler, update_checker):
     if "https://github.com/test/repo" in scheduler._last_check:
         del scheduler._last_check["https://github.com/test/repo"]
 
-    with patch("src.scrapper.sender.NotificationSender.send_update_notification", new=AsyncMock()) as mock_sender:
+    with patch("src.scrapper.sender.NotificationSender.send_update_notification", new=AsyncMock()):
         await scheduler._check_all_links()
         assert scheduler._last_check["https://github.com/test/repo"] == update_detail.created_at
 
 @pytest.mark.asyncio
-async def test_handle_check_updates_error(scheduler, update_checker):
+async def test_handle_check_updates_error(scheduler, update_checker) -> None:
     scheduler.update_checker.get_new_updates.side_effect = Exception("Test error")
 
     await scheduler._check_all_links()

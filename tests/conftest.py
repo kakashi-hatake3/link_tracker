@@ -1,16 +1,9 @@
-import asyncio
-from collections.abc import Generator
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from telethon import TelegramClient
 from telethon.events import NewMessage
 from testcontainers.postgres import PostgresContainer
-
-from src.api import router
-from src.server import default_lifespan
 
 
 @pytest.fixture(scope="session")

@@ -3,7 +3,6 @@ from typing import NoReturn
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from testcontainers.postgres import PostgresContainer
 
 from src.scrapper.api import router
 from src.scrapper.storage import ScrapperStorage
@@ -89,7 +88,7 @@ def test_remove_link_success_and_not_found(client: TestClient) -> None:
     headers = {"Tg-Chat-Id": "1"}
 
     link_request = {"link": "https://example.com", "tags": ["tag1"], "filters": []}
-    add_response = client.post("/links", json=link_request, headers=headers)
+    client.post("/links", json=link_request, headers=headers)
 
     remove_request = {"link": "https://example.com"}
     remove_response = client.request("DELETE", "/links", json=remove_request, headers=headers)

@@ -16,13 +16,13 @@ def storage(request, postgres_container) -> StorageInterface:
     with engine.connect() as conn:
         conn.execute(
             text(
-                "TRUNCATE TABLE link_filters, link_tags, links, tags, chats RESTART IDENTITY CASCADE"
-            )
+                "TRUNCATE TABLE link_filters, link_tags, links, tags, chats RESTART IDENTITY CASCADE",
+            ),
         )
         conn.commit()
 
 
-def test_add_and_get_chat(storage: StorageInterface):
+def test_add_and_get_chat(storage: StorageInterface) -> None:
     chat = storage.get_chat(1)
     assert chat is None
 
@@ -37,7 +37,7 @@ def test_add_and_get_chat(storage: StorageInterface):
     assert chat.chat_id == 1
 
 
-def test_remove_chat(storage: StorageInterface):
+def test_remove_chat(storage: StorageInterface) -> None:
     result = storage.remove_chat(999)
     assert result is False
 
@@ -47,12 +47,12 @@ def test_remove_chat(storage: StorageInterface):
     assert storage.get_chat(2) is None
 
 
-def test_add_link_non_existing_chat(storage: StorageInterface):
+def test_add_link_non_existing_chat(storage: StorageInterface) -> None:
     result = storage.add_link(1, "https://example.com/", ["tag1"], ["filter1"])
     assert result is None
 
 
-def test_add_link_success(storage: StorageInterface):
+def test_add_link_success(storage: StorageInterface) -> None:
     storage.add_chat(1)
     result = storage.add_link(1, "https://example.com/", ["tag1", "tag2"], ["filter1"])
     assert result is not None
@@ -61,7 +61,7 @@ def test_add_link_success(storage: StorageInterface):
     assert set(result.filters) == {"filter1"}
 
 
-def test_add_duplicate_link(storage: StorageInterface):
+def test_add_duplicate_link(storage: StorageInterface) -> None:
     storage.add_chat(1)
     first = storage.add_link(1, "https://example.com/", ["tag1"], ["filter1"])
     duplicate = storage.add_link(1, "https://example.com/", ["tag1"], ["filter1"])
@@ -69,18 +69,18 @@ def test_add_duplicate_link(storage: StorageInterface):
     assert duplicate is None
 
 
-def test_remove_link_non_existing_chat(storage: StorageInterface):
+def test_remove_link_non_existing_chat(storage: StorageInterface) -> None:
     result = storage.remove_link(999, "https://example.com/")
     assert result is None
 
 
-def test_remove_link_non_existing_link(storage: StorageInterface):
+def test_remove_link_non_existing_link(storage: StorageInterface) -> None:
     storage.add_chat(1)
     result = storage.remove_link(1, "https://nonexistent.com")
     assert result is None
 
 
-def test_remove_link_success(storage: StorageInterface):
+def test_remove_link_success(storage: StorageInterface) -> None:
     storage.add_chat(1)
     added = storage.add_link(1, "https://example.com/", ["tag1"], ["filter1"])
     assert added is not None
@@ -93,13 +93,13 @@ def test_remove_link_success(storage: StorageInterface):
     assert removed_again is None
 
 
-def test_get_links_non_existing_chat(storage: StorageInterface):
+def test_get_links_non_existing_chat(storage: StorageInterface) -> None:
     links_resp = storage.get_links(999)
     assert links_resp.size == 0
     assert links_resp.links == []
 
 
-def test_get_links_success(storage: StorageInterface):
+def test_get_links_success(storage: StorageInterface) -> None:
     storage.add_chat(1)
     storage.add_link(1, "https://example.com/", ["tag1"], ["filter1"])
     storage.add_link(1, "https://example.org/", ["tag2"], ["filter2"])
@@ -109,7 +109,7 @@ def test_get_links_success(storage: StorageInterface):
     assert urls == {"https://example.com/", "https://example.org/"}
 
 
-def test_get_all_unique_links_chat_ids(storage: StorageInterface):
+def test_get_all_unique_links_chat_ids(storage: StorageInterface) -> None:
     storage.add_chat(1)
     storage.add_chat(2)
     storage.add_chat(3)

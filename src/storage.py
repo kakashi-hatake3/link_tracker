@@ -9,20 +9,17 @@ from sqlalchemy.orm import sessionmaker
 from src.database import Base, Chat
 from src.models import Link, User
 
-
 load_dotenv()
 
 
 class StorageInterface(ABC):
     @abstractmethod
     def add_user(self, chat_id: int) -> None:
-        """Добавить пользователя с указанным chat_id."""
-        pass
+        """Добавить пользователя c указанным chat_id."""
 
     @abstractmethod
     def get_user(self, chat_id: int) -> Optional[User]:
         """Получить пользователя по chat_id."""
-        pass
 
 
 class ORMStorage(StorageInterface):
@@ -46,8 +43,7 @@ class ORMStorage(StorageInterface):
         try:
             user = session.get(Chat, chat_id)
             if user:
-                links = [Link(url=link.url)
-                         for link in user.links]
+                links = [Link(url=link.url) for link in user.links]
                 return User(chat_id=int(user.chat_id), tracked_links=links)
             return None
         finally:
@@ -57,7 +53,7 @@ class ORMStorage(StorageInterface):
 class SQLStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        with self.engine.connect() as conn:
+        with self.engine.connect():
             Base.metadata.create_all(self.engine)
 
     def add_user(self, chat_id: int) -> None:
@@ -70,16 +66,16 @@ class SQLStorage(StorageInterface):
         with self.engine.connect() as conn:
             user_row = conn.execute(
                 text("SELECT chat_id FROM chats WHERE chat_id = :chat_id"),
-                {"chat_id": chat_id}
+                {"chat_id": chat_id},
             ).fetchone()
             if user_row:
                 links_result = []  # type: ignore[var-annotated]
-                try:
+                try:  # noqa: SIM105
                     links_result = conn.execute(  # type: ignore[assignment]
                         text("SELECT url FROM links WHERE chat_id = :chat_id"),
-                        {"chat_id": chat_id}
+                        {"chat_id": chat_id},
                     ).fetchall()
-                except Exception:
+                except Exception:  # noqa: S110, BLE001
                     pass
                 links = [Link(url=row.url) for row in links_result]
                 return User(chat_id=user_row.chat_id, tracked_links=links)
@@ -87,7 +83,7 @@ class SQLStorage(StorageInterface):
 
 
 class Storage(StorageInterface):
-    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None: # type: ignore[assignment]
+    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:  # type: ignore[assignment]
         access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
         self.impl: StorageInterface
         if access_type == "SQL":

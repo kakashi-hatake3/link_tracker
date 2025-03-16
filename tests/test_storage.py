@@ -14,7 +14,7 @@ def storage(request, postgres_container, monkeypatch) -> StorageInterface:
         stor = Storage(postgres_container)
     else:
         raise ValueError("Unknown storage type")
-    yield stor
+    return stor
 
 
 def test_get_user_not_exist(storage: StorageInterface) -> None:

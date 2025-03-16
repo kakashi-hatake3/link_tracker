@@ -2,20 +2,17 @@ import asyncio
 
 import aiohttp
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
-from src.scrapper.app import app, lifespan
+from src.scrapper.app import app
 from src.scrapper.storage import ScrapperStorage
 
 
 class TestStorage:
-    def __init__(self):
+    def __init__(self) -> None:
         self.data = {}
 
-    async def save(self, key, value):
+    async def save(self, key, value) -> None:
         self.data[key] = value
 
     async def get(self, key):
@@ -23,7 +20,7 @@ class TestStorage:
 
 
 @pytest.fixture
-def mock_storage(monkeypatch):
+def mock_storage(monkeypatch) -> None:
     def mock_scrapper_storage():
         return TestStorage()
 

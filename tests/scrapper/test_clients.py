@@ -183,9 +183,10 @@
 #     assert result is None
 
 # test_new_clients.py
-import pytest
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
+
+import pytest
 
 from src.scrapper.clients import BaseClient, GitHubClient, StackOverflowClient
 from src.scrapper.update_checker import UpdateChecker
@@ -219,37 +220,37 @@ class FakeGetContext:
         pass
 
 class FakeSession:
-    def __init__(self, fake_get):
+    def __init__(self, fake_get) -> None:
         self.fake_get = fake_get
 
     def get(self, url, **kwargs):
         return FakeGetContext(self.fake_get, url, kwargs)
 
 
-def test_parse_github_url_valid():
+def test_parse_github_url_valid() -> None:
     owner, repo = BaseClient._parse_github_url("https://github.com/owner/repo")
     assert owner == "owner"
     assert repo == "repo"
 
-def test_parse_github_url_invalid_domain():
+def test_parse_github_url_invalid_domain() -> None:
     owner, repo = BaseClient._parse_github_url("https://example.com/owner/repo")
     assert owner is None
     assert repo is None
 
-def test_parse_github_url_insufficient_parts():
+def test_parse_github_url_insufficient_parts() -> None:
     owner, repo = BaseClient._parse_github_url("https://github.com/owner")
     assert owner is None
     assert repo is None
 
-def test_parse_stackoverflow_url_valid():
+def test_parse_stackoverflow_url_valid() -> None:
     question_id = BaseClient._parse_stackoverflow_url("https://stackoverflow.com/questions/1234567/title")
     assert question_id == "1234567"
 
-def test_parse_stackoverflow_url_invalid_domain():
+def test_parse_stackoverflow_url_invalid_domain() -> None:
     question_id = BaseClient._parse_stackoverflow_url("https://example.com/questions/1234567/title")
     assert question_id is None
 
-def test_parse_stackoverflow_url_invalid_path():
+def test_parse_stackoverflow_url_invalid_path() -> None:
     question_id = BaseClient._parse_stackoverflow_url("https://stackoverflow.com/tags/python")
     assert question_id is None
 
@@ -275,7 +276,7 @@ async def fake_get_github_new_updates(url, **kwargs):
         return FakeResponse(404)
 
 @pytest.mark.asyncio
-async def test_github_get_new_updates_no_last_check():
+async def test_github_get_new_updates_no_last_check() -> None:
     session = FakeSession(lambda url, **kwargs: FakeResponse(200, []))
     client = GitHubClient(session)
     url = "https://github.com/owner/repo"
@@ -283,7 +284,7 @@ async def test_github_get_new_updates_no_last_check():
     assert updates == []
 
 @pytest.mark.asyncio
-async def test_github_get_new_updates_with_updates():
+async def test_github_get_new_updates_with_updates() -> None:
     session = FakeSession(fake_get_github_new_updates)
     client = GitHubClient(session)
     url = "https://github.com/owner/repo"
@@ -319,7 +320,7 @@ async def fake_get_stackoverflow_new_updates(url, **kwargs):
     return FakeResponse(404)
 
 @pytest.mark.asyncio
-async def test_stackoverflow_get_new_updates_no_last_check():
+async def test_stackoverflow_get_new_updates_no_last_check() -> None:
     session = FakeSession(lambda url, **kwargs: FakeResponse(200, {}))
     client = StackOverflowClient(session)
     url = "https://stackoverflow.com/questions/1234567/title"
@@ -327,7 +328,7 @@ async def test_stackoverflow_get_new_updates_no_last_check():
     assert updates == []
 
 @pytest.mark.asyncio
-async def test_stackoverflow_get_new_updates_with_updates():
+async def test_stackoverflow_get_new_updates_with_updates() -> None:
     session = FakeSession(fake_get_stackoverflow_new_updates)
     client = StackOverflowClient(session)
     url = "https://stackoverflow.com/questions/1234567/title"
@@ -343,7 +344,7 @@ async def test_stackoverflow_get_new_updates_with_updates():
     assert len(answer_update.preview) <= 200
 
 @pytest.mark.asyncio
-async def test_update_checker_github():
+async def test_update_checker_github() -> None:
     session = FakeSession(fake_get_github_new_updates)
     checker = UpdateChecker(session)
     url = "https://github.com/owner/repo"
@@ -352,7 +353,7 @@ async def test_update_checker_github():
     assert len(updates) == 2
 
 @pytest.mark.asyncio
-async def test_update_checker_stackoverflow():
+async def test_update_checker_stackoverflow() -> None:
     session = FakeSession(fake_get_stackoverflow_new_updates)
     checker = UpdateChecker(session)
     url = "https://stackoverflow.com/questions/1234567/title"
@@ -361,7 +362,7 @@ async def test_update_checker_stackoverflow():
     assert len(updates) == 2
 
 @pytest.mark.asyncio
-async def test_update_checker_unknown_url():
+async def test_update_checker_unknown_url() -> None:
     session = FakeSession(lambda url, **kwargs: FakeResponse(200, {}))
     checker = UpdateChecker(session)
     url = "https://example.com"

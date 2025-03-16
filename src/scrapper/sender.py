@@ -6,13 +6,12 @@ from starlette.status import HTTP_200_OK
 
 from src.models import LinkUpdate
 
-
 logger = logging.getLogger(__name__)
 
 
 class NotificationSender:
 
-    def __init__(self, bot_base_url: str):
+    def __init__(self, bot_base_url: str) -> None:
         self.bot_base_url = bot_base_url
 
     async def send_update_notification(self, update: LinkUpdate) -> None:

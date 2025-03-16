@@ -3,7 +3,6 @@ from fastapi import HTTPException
 
 from src.handlers.bot_handlers import HELP_MESSAGE, BotHandler
 from src.storage import Storage
-from tests.conftest import postgres_container
 
 
 class FakeScrapper:
@@ -65,7 +64,7 @@ class FullFakeScrapper:
                  get_links_return=None,
                  add_link_exception=None,
                  remove_link_exception=None,
-                 get_links_exception=None):
+                 get_links_exception=None) -> None:
         self._register_chat_return = register_chat_return
         self._add_link_return = add_link_return
         self._remove_link_return = remove_link_return
@@ -99,7 +98,7 @@ def storage(postgres_container):
 
 
 @pytest.mark.asyncio
-async def test_start_handler_success(storage):
+async def test_start_handler_success(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(register_chat_return=True)
@@ -110,7 +109,7 @@ async def test_start_handler_success(storage):
 
 
 @pytest.mark.asyncio
-async def test_start_handler_error(storage):
+async def test_start_handler_error(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(register_chat_return=False)
@@ -120,7 +119,7 @@ async def test_start_handler_error(storage):
 
 
 @pytest.mark.asyncio
-async def test_help_handler(storage):
+async def test_help_handler(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     fake_event = FakeEvent("/help")
@@ -129,7 +128,7 @@ async def test_help_handler(storage):
 
 
 @pytest.mark.asyncio
-async def test_track_handler_success(storage):
+async def test_track_handler_success(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(add_link_return="fake_link")
@@ -142,7 +141,7 @@ async def test_track_handler_success(storage):
 
 
 @pytest.mark.asyncio
-async def test_track_handler_missing_url(storage):
+async def test_track_handler_missing_url(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper()
@@ -152,7 +151,7 @@ async def test_track_handler_missing_url(storage):
 
 
 @pytest.mark.asyncio
-async def test_track_handler_invalid_url(storage):
+async def test_track_handler_invalid_url(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper()
@@ -162,7 +161,7 @@ async def test_track_handler_invalid_url(storage):
 
 
 @pytest.mark.asyncio
-async def test_track_handler_scrapper_returns_none(storage):
+async def test_track_handler_scrapper_returns_none(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(add_link_return=None)
@@ -176,7 +175,7 @@ async def test_track_handler_scrapper_returns_none(storage):
 
 
 @pytest.mark.asyncio
-async def test_track_handler_http_exception(storage):
+async def test_track_handler_http_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(add_link_exception=HTTPException(detail="API error", status_code=400))
@@ -194,7 +193,7 @@ async def test_track_handler_http_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_success(storage):
+async def test_untrack_handler_success(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(remove_link_return="fake_removed")
@@ -204,7 +203,7 @@ async def test_untrack_handler_success(storage):
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_missing_url(storage):
+async def test_untrack_handler_missing_url(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper()
@@ -214,7 +213,7 @@ async def test_untrack_handler_missing_url(storage):
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_not_found(storage):
+async def test_untrack_handler_not_found(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(remove_link_return=None)
@@ -224,7 +223,7 @@ async def test_untrack_handler_not_found(storage):
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_http_exception(storage):
+async def test_untrack_handler_http_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(remove_link_exception=HTTPException(detail="API error", status_code=400))
@@ -234,7 +233,7 @@ async def test_untrack_handler_http_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_untrack_handler_generic_exception(storage):
+async def test_untrack_handler_generic_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(remove_link_exception=Exception("Generic error"))
@@ -244,7 +243,7 @@ async def test_untrack_handler_generic_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_list_handler_empty(storage):
+async def test_list_handler_empty(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     async def fake_get_links(chat_id: int):
@@ -257,7 +256,7 @@ async def test_list_handler_empty(storage):
 
 
 @pytest.mark.asyncio
-async def test_list_handler_with_links(storage):
+async def test_list_handler_with_links(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     def fake_get_links(chat_id: int):
@@ -273,7 +272,7 @@ async def test_list_handler_with_links(storage):
 
 
 @pytest.mark.asyncio
-async def test_list_handler_http_exception(storage):
+async def test_list_handler_http_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(get_links_exception=HTTPException(detail="API error", status_code=400))
@@ -283,7 +282,7 @@ async def test_list_handler_http_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_list_handler_generic_exception(storage):
+async def test_list_handler_generic_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     handler.scrapper = FullFakeScrapper(get_links_exception=Exception("Generic error"))
@@ -293,7 +292,7 @@ async def test_list_handler_generic_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_unknown_command_handler(storage):
+async def test_unknown_command_handler(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     fake_event = FakeEvent("/unknown", chat_id=779)
@@ -422,14 +421,14 @@ async def test_untrack_handler_empty_text(storage) -> None:
 
 
 @pytest.mark.asyncio
-async def test_conversation_handler_generic_exception(storage):
+async def test_conversation_handler_generic_exception(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     chat_id = 300
     handler.conversations[chat_id] = {
-         'url': 'https://example.com',
-         'tags': ['tag1', 'tag2'],
-         'stage': 'await_filters'
+         "url": "https://example.com",
+         "tags": ["tag1", "tag2"],
+         "stage": "await_filters",
     }
     handler.scrapper = FullFakeScrapper(add_link_exception=Exception("Test generic error"))
     fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)
@@ -439,14 +438,14 @@ async def test_conversation_handler_generic_exception(storage):
 
 
 @pytest.mark.asyncio
-async def test_conversation_handler_link_response_none(storage):
+async def test_conversation_handler_link_response_none(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     chat_id = 301
     handler.conversations[chat_id] = {
-         'url': 'https://example.com',
-         'tags': ['tag1', 'tag2'],
-         'stage': 'await_filters'
+         "url": "https://example.com",
+         "tags": ["tag1", "tag2"],
+         "stage": "await_filters",
     }
     handler.scrapper = FullFakeScrapper(add_link_return=None)
     fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)
@@ -456,14 +455,14 @@ async def test_conversation_handler_link_response_none(storage):
 
 
 @pytest.mark.asyncio
-async def test_conversation_handler_success(storage):
+async def test_conversation_handler_success(storage) -> None:
     fake_client = FakeClient()
     handler = BotHandler(fake_client, storage)
     chat_id = 302
     handler.conversations[chat_id] = {
-         'url': 'https://example.com',
-         'tags': ['tag1', 'tag2'],
-         'stage': 'await_filters'
+         "url": "https://example.com",
+         "tags": ["tag1", "tag2"],
+         "stage": "await_filters",
     }
     handler.scrapper = FullFakeScrapper(add_link_return="fake_link")
     fake_event = FakeEvent("filter1 filter2", chat_id=chat_id)

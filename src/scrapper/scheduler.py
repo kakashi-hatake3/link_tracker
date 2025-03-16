@@ -1,15 +1,15 @@
 import asyncio
 import contextlib
+import datetime
 import logging
 from typing import Dict
-import datetime
 
 from pydantic import HttpUrl
 
 from src.models import LinkUpdate
-from src.scrapper.update_checker import UpdateChecker
 from src.scrapper.sender import NotificationSender
 from src.scrapper.storage import ScrapperStorage
+from src.scrapper.update_checker import UpdateChecker
 from src.settings import TGBotSettings
 
 settings = TGBotSettings()  # type: ignore[call-arg]
@@ -68,7 +68,10 @@ class UpdateScheduler:
         for url_str, chat_ids in self.storage.get_all_unique_links_chat_ids():
             try:
                 last_check = self._last_check.get(url_str)
-                new_updates = await self.update_checker.get_new_updates(HttpUrl(url_str), last_check)
+                new_updates = await self.update_checker.get_new_updates(
+                    HttpUrl(url_str),
+                    last_check,
+                )
                 if new_updates:
                     for upd in new_updates:
                         message = (
@@ -91,5 +94,5 @@ class UpdateScheduler:
                     self._last_check[url_str] = latest_time
                 else:
                     self._last_check[url_str] = datetime.datetime.now(datetime.UTC)
-            except Exception:
+            except Exception:  # noqa: PERF203
                 logger.exception("Ошибка проверки URL %s", url_str)

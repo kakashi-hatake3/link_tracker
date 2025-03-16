@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.models import LinkUpdate
 from src.scrapper.sender import NotificationSender
 
+
 class FakeAiohttpResponse:
-    def __init__(self, status, json_data=None):
+    def __init__(self, status, json_data=None) -> None:
         self.status = status
         self._json_data = json_data or {}
 
@@ -20,7 +22,7 @@ class FakeAiohttpResponse:
 
 
 @pytest.mark.asyncio
-async def test_send_update_notification_exception():
+async def test_send_update_notification_exception() -> None:
     update = LinkUpdate(
         id=3,
         url="https://github.com/owner/repo",

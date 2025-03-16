@@ -3,7 +3,6 @@ from typing import Awaitable, Optional, Type, Union
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from telethon import TelegramClient
 
 

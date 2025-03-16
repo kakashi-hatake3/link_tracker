@@ -1,16 +1,15 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Dict, Set
-
 import os
+from abc import ABC, abstractmethod
+from typing import Dict, Optional, Set
 
 from dotenv import load_dotenv
 from pydantic import HttpUrl
-from sqlalchemy import create_engine, text, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import sessionmaker
 
+from src.database import Base, Chat, Filter, Link, Tag
 from src.scrapper.models import ChatInfo, LinkResponse, ListLinksResponse
 from src.utils import chat_to_schema, link_to_schema
-from src.database import Base, Chat, Link, Tag, Filter
 
 load_dotenv()
 
@@ -19,17 +18,14 @@ class StorageInterface(ABC):
     @abstractmethod
     def add_chat(self, chat_id: int) -> None:
         """Добавить новый чат."""
-        pass
 
     @abstractmethod
     def remove_chat(self, chat_id: int) -> bool:
         """Удалить чат."""
-        pass
 
     @abstractmethod
     def get_chat(self, chat_id: int) -> Optional[ChatInfo]:
-        """Получить информацию о чате."""
-        pass
+        """Получить информацию o чате."""
 
     @abstractmethod
     def add_link(
@@ -40,22 +36,18 @@ class StorageInterface(ABC):
         filters: list[str],
     ) -> Optional[LinkResponse]:
         """Добавить ссылку для отслеживания."""
-        pass
 
     @abstractmethod
     def remove_link(self, chat_id: int, url: HttpUrl) -> Optional[LinkResponse]:
         """Удалить ссылку из отслеживания."""
-        pass
 
     @abstractmethod
     def get_links(self, chat_id: int) -> ListLinksResponse:
         """Получить все отслеживаемые ссылки чата."""
-        pass
 
     @abstractmethod
     def get_all_unique_links_chat_ids(self) -> Dict[str, Set[int]]:
         """Получить словарь уникальных ссылок и множества чатов, отслеживающих их."""
-        pass
 
 
 class ORMStorage(StorageInterface):
@@ -109,9 +101,9 @@ class ORMStorage(StorageInterface):
             if not chat:
                 return None
 
-            existing = session.query(Link).filter(
-                Link.chat_id == chat_id, Link.url == str(url)
-            ).first()
+            existing = (
+                session.query(Link).filter(Link.chat_id == chat_id, Link.url == str(url)).first()
+            )
             if existing:
                 return None
 
@@ -136,9 +128,7 @@ class ORMStorage(StorageInterface):
     def remove_link(self, chat_id: int, url: HttpUrl) -> Optional[LinkResponse]:
         session = self.Session()
         try:
-            link = session.query(Link).filter(
-                Link.chat_id == chat_id, Link.url == str(url)
-            ).first()
+            link = session.query(Link).filter(Link.chat_id == chat_id, Link.url == str(url)).first()
             if link:
                 link_schema = link_to_schema(link)
                 session.delete(link)
@@ -170,7 +160,7 @@ class ORMStorage(StorageInterface):
 class SQLStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        with self.engine.connect() as conn:
+        with self.engine.connect():
             Base.metadata.create_all(self.engine)
 
     def add_chat(self, chat_id: int) -> None:
@@ -212,7 +202,7 @@ class SQLStorage(StorageInterface):
                 return None
 
             insert_link = text(
-                "INSERT INTO links (chat_id, url) VALUES (:chat_id, :url) RETURNING id"
+                "INSERT INTO links (chat_id, url) VALUES (:chat_id, :url) RETURNING id",
             )
             result = conn.execute(insert_link, {"chat_id": chat_id, "url": str(url)})
             link_row = result.fetchone()
@@ -226,12 +216,13 @@ class SQLStorage(StorageInterface):
                     INSERT INTO tags (name) VALUES (:name)
                     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
                     RETURNING id
-                    """
+                    """,
                 )
                 tag_result = conn.execute(upsert_tag, {"name": tag})
-                tag_id = tag_result.fetchone().id # type: ignore[union-attr]
+                tag_id = tag_result.fetchone().id  # type: ignore[union-attr]
                 link_tag = text(
-                    "INSERT INTO link_tags (link_id, tag_id) VALUES (:link_id, :tag_id) ON CONFLICT DO NOTHING"
+                    "INSERT INTO link_tags (link_id, tag_id) "
+                    "VALUES (:link_id, :tag_id) ON CONFLICT DO NOTHING",
                 )
                 conn.execute(link_tag, {"link_id": link_id, "tag_id": tag_id})
 
@@ -241,12 +232,13 @@ class SQLStorage(StorageInterface):
                     INSERT INTO filters (name) VALUES (:name)
                     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
                     RETURNING id
-                    """
+                    """,
                 )
                 filter_result = conn.execute(upsert_filter, {"name": flt})
-                filter_id = filter_result.fetchone().id # type: ignore[union-attr]
+                filter_id = filter_result.fetchone().id  # type: ignore[union-attr]
                 link_filter = text(
-                    "INSERT INTO link_filters (link_id, filter_id) VALUES (:link_id, :filter_id) ON CONFLICT DO NOTHING"
+                    "INSERT INTO link_filters (link_id, filter_id) "
+                    "VALUES (:link_id, :filter_id) ON CONFLICT DO NOTHING",
                 )
                 conn.execute(link_filter, {"link_id": link_id, "filter_id": filter_id})
 
@@ -257,7 +249,7 @@ class SQLStorage(StorageInterface):
                 SELECT t.name FROM tags t
                 JOIN link_tags lt ON t.id = lt.tag_id
                 WHERE lt.link_id = :link_id
-                """
+                """,
             )
             tag_names = [r.name for r in conn.execute(select_tags, {"link_id": link_id})]
             select_filters = text(
@@ -265,7 +257,7 @@ class SQLStorage(StorageInterface):
                 SELECT f.name FROM filters f
                 JOIN link_filters lf ON f.id = lf.filter_id
                 WHERE lf.link_id = :link_id
-                """
+                """,
             )
             filter_names = [r.name for r in conn.execute(select_filters, {"link_id": link_id})]
 
@@ -289,7 +281,7 @@ class SQLStorage(StorageInterface):
                 SELECT t.name FROM tags t
                 JOIN link_tags lt ON t.id = lt.tag_id
                 WHERE lt.link_id = :link_id
-                """
+                """,
             )
             tag_names = [r.name for r in conn.execute(select_tags, {"link_id": link_id})]
             select_filters = text(
@@ -297,12 +289,18 @@ class SQLStorage(StorageInterface):
                 SELECT f.name FROM filters f
                 JOIN link_filters lf ON f.id = lf.filter_id
                 WHERE lf.link_id = :link_id
-                """
+                """,
             )
             filter_names = [r.name for r in conn.execute(select_filters, {"link_id": link_id})]
 
-            conn.execute(text("DELETE FROM link_tags WHERE link_id = :link_id"), {"link_id": link_id})
-            conn.execute(text("DELETE FROM link_filters WHERE link_id = :link_id"), {"link_id": link_id})
+            conn.execute(
+                text("DELETE FROM link_tags WHERE link_id = :link_id"),
+                {"link_id": link_id},
+            )
+            conn.execute(
+                text("DELETE FROM link_filters WHERE link_id = :link_id"),
+                {"link_id": link_id},
+            )
             delete_link = text("DELETE FROM links WHERE id = :link_id RETURNING id, url")
             result = conn.execute(delete_link, {"link_id": link_id})
             conn.commit()
@@ -327,7 +325,7 @@ class SQLStorage(StorageInterface):
                     SELECT t.name FROM tags t
                     JOIN link_tags lt ON t.id = lt.tag_id
                     WHERE lt.link_id = :link_id
-                    """
+                    """,
                 )
                 tag_names = [r.name for r in conn.execute(select_tags, {"link_id": link_id})]
                 select_filters = text(
@@ -335,7 +333,7 @@ class SQLStorage(StorageInterface):
                     SELECT f.name FROM filters f
                     JOIN link_filters lf ON f.id = lf.filter_id
                     WHERE lf.link_id = :link_id
-                    """
+                    """,
                 )
                 filter_names = [r.name for r in conn.execute(select_filters, {"link_id": link_id})]
                 links_list.append(
@@ -344,7 +342,7 @@ class SQLStorage(StorageInterface):
                         url=row.url,
                         tags=tag_names,
                         filters=filter_names,
-                    )
+                    ),
                 )
         return ListLinksResponse(links=links_list, size=len(links_list))
 
@@ -359,7 +357,7 @@ class SQLStorage(StorageInterface):
 
 
 class ScrapperStorage(StorageInterface):
-    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None: # type: ignore[arg-type, assignment]
+    def __init__(self, db_url: str = os.getenv("DB_URL")) -> None:  # type: ignore[arg-type, assignment]
         access_type = os.getenv("ACCESS_TYPE", "ORM").upper()
         self.impl: StorageInterface
         if access_type == "SQL":
@@ -381,7 +379,7 @@ class ScrapperStorage(StorageInterface):
         chat_id: int,
         url: HttpUrl,
         tags: list[str],
-        filters:list[str],
+        filters: list[str],
     ) -> Optional[LinkResponse]:
         return self.impl.add_link(chat_id, url, tags, filters)
 
