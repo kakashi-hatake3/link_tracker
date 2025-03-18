@@ -1,12 +1,12 @@
-import urllib.parse
-import os
-import subprocess
 from unittest.mock import MagicMock, Mock
 
 import pytest
+from sqlalchemy import create_engine
 from telethon import TelegramClient
 from telethon.events import NewMessage
 from testcontainers.postgres import PostgresContainer
+
+from src.database import Base
 
 
 @pytest.fixture(scope="session")
@@ -19,55 +19,12 @@ def mock_event() -> Mock:
     return event
 
 
-def convert_to_jdbc(db_url: str, use_host_internal: bool = True) -> str:
-    """Преобразует URL подключения в формат JDBC, который требуется Liquibase."""
-    parsed = urllib.parse.urlparse(db_url)
-    host = parsed.hostname
-    port = parsed.port
-    if use_host_internal and host == "localhost":
-        host = "host.docker.internal"
-    jdbc_url = f"jdbc:postgresql://{host}:{port}{parsed.path}"
-    return jdbc_url
-
-
 @pytest.fixture(scope="module")
 def postgres_container() -> str:
     with PostgresContainer("postgres:14") as postgres:
         db_url = postgres.get_connection_url(driver="psycopg").replace("postgresql://", "postgresql+psycopg://", 1)
-
-        ci_env = os.environ.get("CI")
-        if ci_env:
-            jdbc_url = convert_to_jdbc(db_url, use_host_internal=False)
-            docker_command = [
-                "docker", "run", "--rm",
-                "--network=host",
-                "-v", f"{os.getcwd()}/migrations:/changesets",
-                "liquibase/liquibase:4.29",
-                "--searchPath=/changesets",
-                "--changelog-file=master.xml",
-                "--driver=org.postgresql.Driver",
-                f"--url={jdbc_url}",
-                "--username=postgres",
-                "--password=postgres",
-                "update"
-            ]
-        else:
-            jdbc_url = convert_to_jdbc(db_url, use_host_internal=True)
-            docker_command = [
-                "docker", "run", "--rm",
-                "--add-host=host.docker.internal:host-gateway",
-                "-v", f"{os.getcwd()}/migrations:/changesets",
-                "liquibase/liquibase:4.29",
-                "--searchPath=/changesets",
-                "--changelog-file=master.xml",
-                "--driver=org.postgresql.Driver",
-                f"--url={jdbc_url}",
-                "--username=postgres",
-                "--password=postgres",
-                "update"
-            ]
-        subprocess.run(docker_command, check=True)
-
+        engine = create_engine(db_url)
+        Base.metadata.create_all(engine)
         yield db_url
 
 
