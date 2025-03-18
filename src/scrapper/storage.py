@@ -7,7 +7,7 @@ from pydantic import HttpUrl
 from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import sessionmaker
 
-from src.database import Base, Chat, Filter, Link, Tag
+from src.database import Chat, Filter, Link, Tag
 from src.scrapper.models import ChatInfo, LinkResponse, ListLinksResponse
 from src.utils import chat_to_schema, link_to_schema
 
@@ -53,7 +53,6 @@ class StorageInterface(ABC):
 class ORMStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
     def add_chat(self, chat_id: int) -> None:
@@ -160,8 +159,6 @@ class ORMStorage(StorageInterface):
 class SQLStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        with self.engine.connect():
-            Base.metadata.create_all(self.engine)
 
     def add_chat(self, chat_id: int) -> None:
         query = text("INSERT INTO chats (chat_id) VALUES (:chat_id) ON CONFLICT DO NOTHING")

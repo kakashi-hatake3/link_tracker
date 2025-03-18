@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from src.database import Base, Chat
+from src.database import Chat
 from src.models import Link, User
 
 load_dotenv()
@@ -25,7 +25,6 @@ class StorageInterface(ABC):
 class ORMStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
     def add_user(self, chat_id: int) -> None:
@@ -53,8 +52,6 @@ class ORMStorage(StorageInterface):
 class SQLStorage(StorageInterface):
     def __init__(self, db_url: str) -> None:
         self.engine = create_engine(db_url)
-        with self.engine.connect():
-            Base.metadata.create_all(self.engine)
 
     def add_user(self, chat_id: int) -> None:
         query = text("INSERT INTO chats (chat_id) VALUES (:chat_id) ON CONFLICT DO NOTHING")
