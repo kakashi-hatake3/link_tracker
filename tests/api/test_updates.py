@@ -46,7 +46,10 @@ async def test_process_update_success() -> None:
     fake_app = FakeApp()
     fake_app.storage.add_user(111, FakeUser())
     update = LinkUpdate(
-        id=1, url="https://example.com", tgChatIds=[111, 222], description="Test update",
+        id=1,
+        url="https://example.com",
+        tgChatIds=[111, 222],
+        description="Test update",
     )
     fake_request = FakeRequest(fake_app)
     response = await process_update(update, fake_request)

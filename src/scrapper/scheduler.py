@@ -1,21 +1,18 @@
 import asyncio
 import contextlib
+import datetime
 import logging
-from typing import TYPE_CHECKING, Dict, Set
+from typing import Dict
 
-import aiohttp
-from fastapi.encoders import jsonable_encoder
-from starlette.status import HTTP_200_OK
+from pydantic import HttpUrl
 
 from src.models import LinkUpdate
-from src.scrapper.clients import UpdateChecker
+from src.scrapper.sender import NotificationSender
 from src.scrapper.storage import ScrapperStorage
+from src.scrapper.update_checker import UpdateChecker
 from src.settings import TGBotSettings
 
 settings = TGBotSettings()  # type: ignore[call-arg]
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +24,14 @@ class UpdateScheduler:
         update_checker: UpdateChecker,
         bot_base_url: str = "http://localhost:7777",
     ) -> None:
-        self.storage = storage
+        self.storage = storage  # type: ignore
         self.update_checker = update_checker
         self.bot_base_url = bot_base_url.rstrip("/")
-        self._last_check: Dict[str, datetime] = {}
+        self._last_check: Dict[str, datetime.datetime] = {}
         self._running = False
         self._task: asyncio.Task | None = None  # type: ignore[type-arg]
         self._next_update_id = 1
+        self._sender = NotificationSender(bot_base_url)
 
     async def start(self, check_interval: int = settings.check_interval) -> None:
         """Запускает планировщик c указанным интервалом проверки в секундах."""
@@ -66,71 +64,35 @@ class UpdateScheduler:
 
             await asyncio.sleep(interval)
 
-    def _get_all_links(self) -> Dict[str, Set[int]]:
-        # Собираем все уникальные ссылки из всех чатов
-        all_links: Dict[str, Set[int]] = {}
-        chats = self.storage.chats
-        for chat_info in chats.values():
-            for link in chat_info.links:
-                str_url = str(link.url)
-                if str_url not in all_links:
-                    all_links[str_url] = set()
-                all_links[str_url].add(chat_info.chat_id)
-        logger.info("links: %s", all_links)
-        return all_links
-
     async def _check_all_links(self) -> None:
-        """Проверяет обновления для всех отслеживаемых ссылок."""
-        all_links = self._get_all_links()
-        # Проверяем каждую ссылку
-        for url_str, chat_ids in all_links.items():
+        for url_str, chat_ids in self.storage.get_all_unique_links_chat_ids():
             try:
-                last_update = await self.update_checker.check_updates(url_str)  # type: ignore[arg-type]
-                logger.info("last update: %s", last_update)
-                if not last_update:
-                    continue
-
-                # Если это первая проверка или есть обновление
-                if url_str not in self._last_check or last_update > self._last_check[url_str]:
-                    # Если это не первая проверка, значит есть реальное обновление
-                    if url_str in self._last_check:
-                        logger.info("Found update for URL: %s", url_str)
-                        # Создаем объект обновления
-                        update = LinkUpdate(
-                            id=self._next_update_id,
-                            url=url_str,  # type: ignore[arg-type]
+                last_check = self._last_check.get(url_str)
+                new_updates = await self.update_checker.get_new_updates(
+                    HttpUrl(url_str),
+                    last_check,
+                )
+                if new_updates:
+                    for upd in new_updates:
+                        message = (
+                            f"Платформа: {upd.platform}\n"
+                            f"Тип: {upd.update_type}\n"
+                            f"Заголовок: {upd.title}\n"
+                            f"Пользователь: {upd.username}\n"
+                            f"Время создания: {upd.created_at.isoformat()}\n"
+                            f"Превью: {upd.preview}"
+                        )
+                        update_obj = LinkUpdate(
+                            id=self._next_update_id,  # type: ignore
+                            url=HttpUrl(url_str),
                             tgChatIds=list(chat_ids),
+                            description=message,
                         )
                         self._next_update_id += 1
-
-                        # Отправляем уведомление через API
-                        await self._send_update_notification(update)
-
-                    self._last_check[url_str] = last_update
-
-            except Exception:
-                logger.exception("Error checking URL %s", url_str)
-
-    async def _send_update_notification(self, update: LinkUpdate) -> None:
-        """Отправляет уведомление o6 обновлении через API бота."""
-        try:
-            bot_api_url = f"{self.bot_base_url}/api/v1/updates"
-            logger.debug("before session")
-            json_data = jsonable_encoder(update)
-            logger.debug("after dump: %s", json_data)
-            async with aiohttp.ClientSession() as session:
-                logger.debug("getting session")
-                async with session.post(bot_api_url, json=json_data) as response:
-                    logger.debug("sending request: %d", response.status)
-                    if response.status != HTTP_200_OK:
-                        error_data = await response.json()
-                        logger.error("Failed to send update notification: %s", error_data)
-                    else:
-                        logger.info(
-                            "Successfully sent update notification for URL %s to %d chats",
-                            update.url,
-                            len(update.tg_chat_ids),
-                        )
-
-        except Exception:
-            logger.exception("Error sending update notification")
+                        await self._sender.send_update_notification(update_obj)
+                    latest_time = max(upd.created_at for upd in new_updates)
+                    self._last_check[url_str] = latest_time
+                else:
+                    self._last_check[url_str] = datetime.datetime.now(datetime.UTC)
+            except Exception:  # noqa: PERF203
+                logger.exception("Ошибка проверки URL %s", url_str)

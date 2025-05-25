@@ -1,4 +1,3 @@
-
 from typing import NoReturn
 
 import pytest
@@ -10,10 +9,10 @@ from src.scrapper.storage import ScrapperStorage
 
 
 @pytest.fixture
-def app() -> FastAPI:
+def app(postgres_container) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.state.storage = ScrapperStorage()
+    app.state.storage = ScrapperStorage(postgres_container)
     return app
 
 
@@ -89,8 +88,7 @@ def test_remove_link_success_and_not_found(client: TestClient) -> None:
     headers = {"Tg-Chat-Id": "1"}
 
     link_request = {"link": "https://example.com", "tags": ["tag1"], "filters": []}
-    add_response = client.post("/links", json=link_request, headers=headers)
-    assert add_response.status_code == 200
+    client.post("/links", json=link_request, headers=headers)
 
     remove_request = {"link": "https://example.com"}
     remove_response = client.request("DELETE", "/links", json=remove_request, headers=headers)

@@ -1,15 +1,12 @@
-import asyncio
-from collections.abc import Generator
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 from telethon import TelegramClient
 from telethon.events import NewMessage
+from testcontainers.postgres import PostgresContainer
 
-from src.api import router
-from src.server import default_lifespan
+from src.database import Base
 
 
 @pytest.fixture(scope="session")
@@ -20,6 +17,15 @@ def mock_event() -> Mock:
     event.message = "/chat_id"
     event.client = MagicMock(spec=TelegramClient)
     return event
+
+
+@pytest.fixture(scope="module")
+def postgres_container() -> str:
+    with PostgresContainer("postgres:14") as postgres:
+        db_url = postgres.get_connection_url(driver="psycopg").replace("postgresql://", "postgresql+psycopg://", 1)
+        engine = create_engine(db_url)
+        Base.metadata.create_all(engine)
+        yield db_url
 
 
 # @pytest.fixture(scope="session")

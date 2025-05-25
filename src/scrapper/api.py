@@ -97,8 +97,7 @@ async def get_links(
 ) -> ListLinksResponse:
     try:
         storage: ScrapperStorage = request.app.state.storage
-        links = storage.get_links(tg_chat_id)
-        return ListLinksResponse(links=links, size=len(links))
+        return storage.get_links(tg_chat_id)
     except Exception as e:
         raise HTTPException(
             status_code=400,

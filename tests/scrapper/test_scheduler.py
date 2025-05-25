@@ -1,36 +1,37 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.scrapper.scheduler import UpdateScheduler
-from src.scrapper.storage import ScrapperStorage
 
+
+class FakeStorage:
+    def __init__(self) -> None:
+        self._links = {
+            "https://github.com/test/repo": {123},
+            "https://stackoverflow.com/questions/12345/test": {456},
+        }
+
+    def get_all_unique_links_chat_ids(self):
+        yield from self._links.items()
 
 @pytest.fixture
 def storage():
-    storage = ScrapperStorage()
-    storage.add_chat(123)
-    storage.add_link(123, "https://github.com/test/repo", [], [])
-    storage.add_link(123, "https://stackoverflow.com/questions/12345/test", [], [])
-    return storage
-
+    return FakeStorage()
 
 @pytest.fixture
 def update_checker():
     checker = MagicMock()
-    checker.check_updates = AsyncMock()
+    checker.get_new_updates = AsyncMock()
     return checker
-
 
 @pytest.fixture
 def scheduler(storage, update_checker):
     return UpdateScheduler(storage, update_checker, "http://test.com")
 
-
 @pytest.mark.asyncio
 async def test_start_stop_scheduler(scheduler) -> None:
-    """Тест запуска и остановки планировщика."""
     await scheduler.start(check_interval=1)
     assert scheduler._running is True
     assert scheduler._task is not None
@@ -39,84 +40,59 @@ async def test_start_stop_scheduler(scheduler) -> None:
     assert scheduler._running is False
     assert scheduler._task.cancelled()
 
-
 @pytest.mark.asyncio
-async def test_check_updates_github(scheduler, update_checker) -> None:
-    """Тест проверки обновлений для GitHub ссылки."""
-    update_time = datetime.now()
-    update_checker.check_updates.return_value = update_time
+async def test_check_updates_with_new_updates(scheduler, update_checker) -> None:
+    update_detail1 = MagicMock()
+    update_detail1.platform = "GitHub"
+    update_detail1.update_type = "PR"
+    update_detail1.title = "Test PR"
+    update_detail1.username = "user1"
+    update_detail1.created_at = datetime.now() + timedelta(seconds=10)
+    update_detail1.preview = "Preview text 1"[:200]
 
-    await scheduler._check_all_links()
+    update_detail2 = MagicMock()
+    update_detail2.platform = "GitHub"
+    update_detail2.update_type = "Issue"
+    update_detail2.title = "Test Issue"
+    update_detail2.username = "user2"
+    update_detail2.created_at = datetime.now() + timedelta(seconds=20)
+    update_detail2.preview = "Preview text 2"[:200]
 
-    update_checker.check_updates.assert_any_call("https://github.com/test/repo")
+    update_checker.get_new_updates.return_value = [update_detail1, update_detail2]
 
-    assert scheduler._last_check["https://github.com/test/repo"] == update_time
+    scheduler._last_check["https://github.com/test/repo"] = datetime.now()
 
-
-@pytest.mark.asyncio
-async def test_check_updates_stackoverflow(scheduler, update_checker) -> None:
-    """Тест проверки обновлений для StackOverflow ссылки."""
-    update_time = datetime.now()
-    update_checker.check_updates.return_value = update_time
-
-    await scheduler._check_all_links()
-
-    update_checker.check_updates.assert_any_call("https://stackoverflow.com/questions/12345/test")
-
-    assert scheduler._last_check["https://stackoverflow.com/questions/12345/test"] == update_time
-
-
-@pytest.mark.asyncio
-async def test_send_update_notification(scheduler) -> None:
-    """Тест отправки уведомления об обновлении."""
-    mock_response = AsyncMock()
-    mock_response.status = 200
-
-    mock_session = MagicMock()
-    mock_session.post = AsyncMock(return_value=mock_response)
-
-    update_time = datetime.now()
-    scheduler.update_checker.check_updates.return_value = update_time
-
-    old_time = datetime(2000, 1, 1)
-    scheduler._last_check["https://github.com/test/repo"] = old_time
-
-    with patch("aiohttp.ClientSession") as mock_session_class:
-        mock_session_class.return_value = mock_session
-        mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_class.return_value.__aexit__ = AsyncMock()
-
+    with patch("src.scrapper.sender.NotificationSender.send_update_notification", new=AsyncMock()) as mock_sender:
         await scheduler._check_all_links()
 
-        mock_session.post.assert_called_once()
-
-        assert scheduler._last_check["https://github.com/test/repo"] == update_time
-
+        assert mock_sender.call_count == 4
+        expected_last_check = max(update_detail1.created_at, update_detail2.created_at)
+        assert scheduler._last_check["https://github.com/test/repo"] == expected_last_check
 
 @pytest.mark.asyncio
-async def test_no_update_notification_for_first_check(scheduler) -> None:
-    """Тест отсутствия уведомления при первой проверке."""
-    update_time = datetime.now()
-    scheduler.update_checker.check_updates.return_value = update_time
+async def test_no_notification_on_first_check(scheduler, update_checker) -> None:
+    update_detail = MagicMock()
+    update_detail.platform = "GitHub"
+    update_detail.update_type = "PR"
+    update_detail.title = "Test PR"
+    update_detail.username = "user1"
+    update_detail.created_at = datetime.now() + timedelta(seconds=10)
+    update_detail.preview = "Preview text"[:200]
 
-    with patch("aiohttp.ClientSession") as mock_session_class:
-        mock_session = AsyncMock()
-        mock_session_class.return_value = mock_session
-        mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_class.return_value.__aexit__ = AsyncMock()
+    update_checker.get_new_updates.return_value = [update_detail]
 
+    if "https://github.com/test/repo" in scheduler._last_check:
+        del scheduler._last_check["https://github.com/test/repo"]
+
+    with patch("src.scrapper.sender.NotificationSender.send_update_notification", new=AsyncMock()):
         await scheduler._check_all_links()
-
-        assert not mock_session.post.called
-
-        assert scheduler._last_check["https://github.com/test/repo"] == update_time
-
+        assert scheduler._last_check["https://github.com/test/repo"] == update_detail.created_at
 
 @pytest.mark.asyncio
-async def test_handle_check_updates_error(scheduler) -> None:
-    """Тест обработки ошибки при проверке обновлений."""
-    scheduler.update_checker.check_updates.side_effect = Exception("Test error")
+async def test_handle_check_updates_error(scheduler, update_checker) -> None:
+    scheduler.update_checker.get_new_updates.side_effect = Exception("Test error")
 
     await scheduler._check_all_links()
 
-    assert "https://github.com/test/repo" not in scheduler._last_check
+    for url, _ in scheduler.storage.get_all_unique_links_chat_ids():
+        assert url not in scheduler._last_check

@@ -6,9 +6,9 @@ import aiohttp
 from fastapi import FastAPI
 
 from src.scrapper.api import router
-from src.scrapper.clients import UpdateChecker
 from src.scrapper.scheduler import UpdateScheduler
 from src.scrapper.storage import ScrapperStorage
+from src.scrapper.update_checker import UpdateChecker
 from src.settings import TGBotSettings
 
 logger = logging.getLogger(__name__)
